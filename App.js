@@ -1,117 +1,66 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { SafeAreaView, StyleSheet, Text, View, Button } from 'react-native';
-import { Camera } from 'expo-camera';
-import * as Notifications from 'expo-notifications';
-import axios from 'axios';
+import React, { useState } from "react";
+import { View, Button, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { CameraView, useCameraPermissions } from 'expo-camera';
 
-const HomeScreen = ({ navigation }) => {
-  const [hasPermission, setHasPermission] = useState(null);
-  const [predictions, setPredictions] = useState([]);
-  const cameraRef = useRef(null);
+export default function CameraComp({ navigation }) {
+  const [facing, setFacing] = useState('back');
+  const [permission, requestPermission] = useCameraPermissions();
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-    })();
-
-    configurePushNotifications();
-  }, []);
-
-  const configurePushNotifications = () => {
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-      }),
-    });
-  };
-
-  const sendNotification = (message) => {
-    Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Fishing Alert',
-        body: message,
-      },
-      trigger: null,
-    });
-  };
-
-  const handleCameraCapture = async () => {
-    if (cameraRef.current) {
-      const photo = await cameraRef.current.takePictureAsync({ base64: true });
-      const base64Image = photo.base64;
-
-      try {
-        const response = await axios({
-          method: 'POST',
-          url: 'https://detect.roboflow.com/fishing-float/1',
-          params: {
-            api_key: 'zuxqZZaKZVPbzrB23QRP',
-          },
-          data: base64Image,
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        });
-
-        const bobberDetected = response.data.predictions.some(
-          (prediction) => prediction.class === 'bobber'
-        );
-
-        if (!bobberDetected) {
-          sendNotification('No bobber detected! Check your line.');
-        }
-
-        setPredictions(response.data.predictions);
-      } catch (error) {
-        console.error('Error:', error.message);
-      }
-    }
-  };
-
-  if (hasPermission === null) {
-    return <Text>Requesting camera permission...</Text>;
+  if (!permission) {
+    // Camera permissions are still loading.
+    return <View />;
   }
-  if (hasPermission === false) {
-    return <Text>No access to camera</Text>;
+
+  if (!permission.granted) {
+    // Camera permissions are not granted yet.
+    return (
+      <View style={styles.container}>
+        <Text style={{ textAlign: 'center' }}>We need your permission to show the camera</Text>
+        <Button onPress={requestPermission} title="Grant Permission" />
+      </View>
+    );
   }
+
+  const toggleCameraFacing = () => {
+    setFacing(current => (current === 'back' ? 'front' : 'back'));
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Camera style={styles.camera} type={Camera.Constants.Type.back} ref={cameraRef} />
-      <View style={styles.predictionsContainer}>
-        {predictions.map((prediction, index) => (
-          <Text key={index} style={styles.predictionText}>
-            {`${prediction.class}: ${prediction.confidence.toFixed(2)}`}
-          </Text>
-        ))}
-      </View>
-      <Button title="Start Recording" onPress={handleCameraCapture} />
-    </SafeAreaView>
+    <View style={styles.container}>
+      <CameraView style={styles.camera} facing={facing}>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
+            <Text style={styles.text}>Flip Camera</Text>
+          </TouchableOpacity>
+        </View>
+      </CameraView>
+      <Button title="Go to Home" onPress={() => navigation.push("Home")} />
+    </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: 'center',
   },
   camera: {
     flex: 1,
   },
-  predictionsContainer: {
-    position: 'absolute',
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    width: '100%',
-    padding: 10,
+  buttonContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: 'transparent',
+    margin: 64,
   },
-  predictionText: {
+  button: {
+    flex: 1,
+    alignSelf: 'flex-end',
+    alignItems: 'center',
+  },
+  text: {
+    fontSize: 24,
+    fontWeight: 'bold',
     color: 'white',
-    fontSize: 16,
-    marginBottom: 10,
   },
 });
-
-export default HomeScreen;
