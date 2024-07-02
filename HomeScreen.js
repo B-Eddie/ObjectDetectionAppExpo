@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SafeAreaView, StyleSheet, Text, View, Button } from 'react-native';
 import { Camera } from 'expo-camera';
 import * as Notifications from 'expo-notifications';
@@ -88,8 +88,7 @@ const HomeScreen = ({ navigation }) => {
           </Text>
         ))}
       </View>
-      <Button title="Capture" onPress={handleCameraCapture} />
-      <Button title="Go to Notifications" onPress={() => navigation.navigate('FishNotifications')} />
+      <Button title="Start Recording" onPress={handleCameraCapture} />
     </SafeAreaView>
   );
 };
