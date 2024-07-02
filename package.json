@@ -12,7 +12,10 @@
     "expo": "~51.0.17",
     "expo-status-bar": "~1.12.1",
     "react": "18.2.0",
-    "react-native": "0.74.2"
+    "react-native": "0.74.2",
+    "react-native-camera": "^4.2.1",
+    "react-native-tflite": "^0.0.2",
+    "react-native-vector-icons": "^10.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
