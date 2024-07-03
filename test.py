@@ -25,3 +25,4 @@ if response.status_code == 200:
 else:
     print('Error occurred while making the request.')
 
+# it returned as an error

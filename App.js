@@ -72,25 +72,29 @@ const CameraComp = ({ navigation }) => {
   const processFrame = async (frame) => {
     const base64Image = await resizeAndBase64Encode(frame);
     try {
-      console.log("b4");
       const response = await axios({
         method: 'POST',
         url: 'https://detect.roboflow.com/bobber-detection/1',
         params: {
           api_key: 'zuxqZZaKZVPbzrB23QRP'
         },
-        data: base64Image,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
+        data: `${base64Image}`
       });
-      console.log("AFTER");
+      console.log("Response Data:", response.data);
       const bobberDetected = response.data.predictions.some(
         (prediction) => prediction.class === 'bobber'
       );
 
+      console.log(bobberDetected);
+
       if (!bobberDetected) {
         sendNotification('No bobber detected! Check your line.');
+        console.log('No bobber detected! Check your line.');
+      } else {
+        console.log("bobber d3etected");
       }
     } catch (error) {
       console.error('Error detecting bobber:', error);
@@ -102,10 +106,10 @@ const CameraComp = ({ navigation }) => {
       const resizedImage = await ImageManipulator.manipulateAsync(
         frameData.uri,
         [{ resize: { height: frameData.height / 5, width: frameData.width / 5 } }],
-        { format: 'jpeg', compress: 1 }
+        { format: 'jpeg', base64: true }
       );
-  
-      return resizedImage.base64; // Return base64 encoded image
+
+      return resizedImage.base64;
     } catch (error) {
       console.error('Error resizing image:', error);
       throw error; // Throw the error instead of returning null
