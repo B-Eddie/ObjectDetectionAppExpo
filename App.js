@@ -3,15 +3,19 @@ import { View, Button, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Notifications from 'expo-notifications';
 import axios from 'axios';
-import ImageResizer from 'react-native-image-resizer';
+import { ImageManipulator } from 'expo-image-manipulator';
 
 const CameraComp = ({ navigation }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [frameInterval, setFrameInterval] = useState(null);
 
   useEffect(() => {
     configurePushNotifications();
+    return () => {
+      clearInterval(frameInterval);
+    };
   }, []);
 
   const configurePushNotifications = () => {
@@ -34,32 +38,40 @@ const CameraComp = ({ navigation }) => {
     });
   };
 
-  const handleCameraStream = async () => {
-    console.log('handleCameraStream');
+  const handleStartStreaming = async () => {
     if (cameraRef.current && !isStreaming) {
       setIsStreaming(true);
-
-      try {
-        const options = { quality: '480p', maxDuration: 60 }; // Example options
-        const data = await cameraRef.current.recordAsync(options);
-
-        // Process the recorded data (e.g., resize and detect bobber)
-        console.log('pre-process data');
-        await processRecordedData(data);
-      } catch (error) {
-        console.error('Error recording video:', error);
-        setIsStreaming(false); // Reset streaming state on error
-      }
+      const interval = setInterval(async () => {
+        try {
+          const frame = await captureFrame();
+          await processFrame(frame);
+        } catch (error) {
+          console.error('Error processing frame:', error);
+        }
+      }, 1000); // Adjust interval as needed
+      setFrameInterval(interval);
     }
   };
 
-  const processRecordedData = async (data) => {
-    console.log('Recorded video data:'); // Check the recorded video data
+  const handleStopStreaming = () => {
+    setIsStreaming(false);
+    clearInterval(frameInterval);
+  };
 
-    // Example: Resize the first frame and detect bobber
-    const frameData = data.frames[0]; // Access the first frame data
-    const base64Image = await resizeAndBase64Encode(frameData);
-    console.log('Resized image:', base64Image); 
+  const captureFrame = async () => {
+    if (cameraRef.current) {
+      const frame = await cameraRef.current.takePictureAsync({
+        quality: 1, // Adjust quality as needed
+        base64: true, // Capture frame as base64
+      });
+      return frame;
+    }
+    return null;
+  };
+
+  const processFrame = async (frame) => {
+    const base64Image = await resizeAndBase64Encode(frame);
+    
     try {
       const response = await axios({
         method: 'POST',
@@ -82,38 +94,26 @@ const CameraComp = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error detecting bobber:', error);
-    } finally {
-      setIsStreaming(false); // Reset streaming state after processing
     }
   };
 
   const resizeAndBase64Encode = async (frameData) => {
     try {
-      // Resize the frame image and encode to base64
-      const resizedImage = await ImageResizer.createResizedImage(
-        `data:image/jpeg;base64,${frameData.base64}`, // Base64 image data
-        frameData.width / 5, // New width (1/5th of original)
-        frameData.height / 5, // New height (1/5th of original)
-        'JPEG', // Image format
-        100 // Image quality (100 is maximum quality)
+      console.log(frameData.uri)
+      const resizedImage = await ImageManipulator.manipulateAsync(
+        frameData.uri,
+        [{ resize: { height: frameData.height / 5, width: frameData.width / 5 } }],
+        [{ format: 'jpeg', compress: 1 }]
       );
 
-      return resizedImage.uri; // Return resized image URI
+      return resizedImage.base64; // Return base64 encoded image
     } catch (error) {
       console.error('Error resizing image:', error);
       return null;
     }
   };
 
-  const handleStopStreaming = () => {
-    if (cameraRef.current && isStreaming) {
-      setIsStreaming(false);
-      cameraRef.current.stopRecording();
-    }
-  };
-
   if (!permission) {
-    console.log('permission');
     return <View />;
   }
 
@@ -131,7 +131,7 @@ const CameraComp = ({ navigation }) => {
       <CameraView style={styles.camera} ref={cameraRef}>
         <View style={styles.buttonContainer}>
           {!isStreaming ? (
-            <TouchableOpacity style={styles.button} onPress={handleCameraStream}>
+            <TouchableOpacity style={styles.button} onPress={handleStartStreaming}>
               <Text style={styles.text}>Start Streaming</Text>
             </TouchableOpacity>
           ) : (
