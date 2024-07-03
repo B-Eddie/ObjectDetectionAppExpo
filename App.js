@@ -3,7 +3,7 @@ import { View, Button, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Notifications from 'expo-notifications';
 import axios from 'axios';
-import { ImageManipulator } from 'expo-image-manipulator';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 const CameraComp = ({ navigation }) => {
   const [permission, requestPermission] = useCameraPermissions();
@@ -71,20 +71,20 @@ const CameraComp = ({ navigation }) => {
 
   const processFrame = async (frame) => {
     const base64Image = await resizeAndBase64Encode(frame);
-    
     try {
+      console.log("b4");
       const response = await axios({
         method: 'POST',
-        url: 'https://detect.roboflow.com/fishing-float/1',
+        url: 'https://detect.roboflow.com/bobber-detection/1',
         params: {
-          api_key: 'zuxqZZaKZVPbzrB23QRP',
+          api_key: 'zuxqZZaKZVPbzrB23QRP'
         },
         data: base64Image,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
       });
-
+      console.log("AFTER");
       const bobberDetected = response.data.predictions.some(
         (prediction) => prediction.class === 'bobber'
       );
@@ -99,17 +99,16 @@ const CameraComp = ({ navigation }) => {
 
   const resizeAndBase64Encode = async (frameData) => {
     try {
-      console.log(frameData.uri)
       const resizedImage = await ImageManipulator.manipulateAsync(
         frameData.uri,
         [{ resize: { height: frameData.height / 5, width: frameData.width / 5 } }],
-        [{ format: 'jpeg', compress: 1 }]
+        { format: 'jpeg', compress: 1 }
       );
-
+  
       return resizedImage.base64; // Return base64 encoded image
     } catch (error) {
       console.error('Error resizing image:', error);
-      return null;
+      throw error; // Throw the error instead of returning null
     }
   };
 
