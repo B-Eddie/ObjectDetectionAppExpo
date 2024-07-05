@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Button, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { CameraView } from 'expo-camera'; // Updated import for CameraView
+import { CameraView, Camera } from 'expo-camera'; // Updated import for CameraView
 import * as Notifications from 'expo-notifications';
 import axios from 'axios';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
 
 const CameraScreen = ({ navigation }) => {
   const [hasPermission, setHasPermission] = useState(null);
@@ -16,17 +15,11 @@ const CameraScreen = ({ navigation }) => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [frameInterval, setFrameInterval] = useState(null);
   const [notifications, setNotifications] = useState([]);
-  const [sound, setSound] = useState();
 
   useEffect(() => {
     const requestCameraPermission = async () => {
-      try {
-        const { status } = await CameraView.requestCameraPermissionsAsync();
-        setHasPermission(status === 'granted');
-      } catch (error) {
-        console.error('Error requesting camera permission:', error);
-        setHasPermission(false);
-      }
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasPermission(status === 'granted');
     };
 
     requestCameraPermission();
@@ -164,9 +157,9 @@ const CameraScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <CameraView
+      <Camera
         style={styles.camera}
-        type={CameraView.Constants.Type.back} // Set camera type as needed
+        type={Camera.Constants.Type.back} // Set camera type as needed
         ref={cameraRef}
       >
         <View style={styles.buttonContainer}>
@@ -180,14 +173,14 @@ const CameraScreen = ({ navigation }) => {
             </TouchableOpacity>
           )}
         </View>
-      </CameraView>
+      </Camera>
       <Button
         title="Go to Notifications"
         onPress={() => navigation.navigate('Notifications', { notifications })}
       />
       <TouchableOpacity
         style={styles.settingsButton}
-        onPress={() => navigation.navigate('Settings', { SettingsScreen })}
+        onPress={() => navigation.navigate('Settings')}
       >
         <MaterialIcons name="settings" size={24} color="black" />
       </TouchableOpacity>
@@ -315,7 +308,7 @@ const NotificationStyles = {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 24,
@@ -323,27 +316,26 @@ const NotificationStyles = {
     marginBottom: 20,
   },
   notificationItem: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
+    backgroundColor: '#f0f0f0',
     padding: 10,
-    marginVertical: 5,
+    marginBottom: 10,
+    borderRadius: 8,
     width: '100%',
   },
   notificationText: {
-    fontSize: 18,
+    fontSize: 16,
   },
   backButton: {
     marginTop: 20,
-    paddingVertical: 10,
+    backgroundColor: '#007bff',
+    paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#ccc',
-    borderRadius: 5,
+    borderRadius: 8,
   },
   backButtonText: {
-    fontSize: 16,
+    color: '#fff',
+    fontSize: 18,
     fontWeight: 'bold',
-    color: 'black',
   },
 };
 
@@ -352,6 +344,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fff',
   },
   camera: {
     flex: 1,
@@ -360,24 +353,23 @@ const styles = StyleSheet.create({
   buttonContainer: {
     position: 'absolute',
     bottom: 20,
-    alignSelf: 'center',
+    width: '100%',
+    alignItems: 'center',
   },
   button: {
-    backgroundColor: 'blue',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
+    backgroundColor: '#007bff',
+    padding: 15,
     borderRadius: 10,
+    marginBottom: 20,
   },
   text: {
-    color: 'white',
     fontSize: 20,
-    fontWeight: 'bold',
+    color: '#fff',
   },
   settingsButton: {
     position: 'absolute',
-    top: 20,
+    top: 40,
     right: 20,
-    padding: 10,
   },
 });
 
@@ -386,8 +378,8 @@ function App() {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Camera">
         <Stack.Screen name="Camera" component={CameraScreen} />
-        <Stack.Screen name="Notifications" component={NotificationScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="Notifications" component={NotificationScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
