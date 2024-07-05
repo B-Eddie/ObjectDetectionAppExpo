@@ -1,29 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Button, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Picker } from '@react-native-picker/picker';
+import { Camera } from 'expo-camera';
 import * as Notifications from 'expo-notifications';
 import axios from 'axios';
 import * as ImageManipulator from 'expo-image-manipulator';
-// import NotificationScreen from './NotificationScreen';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { NavigationContainer } from '@react-navigation/native';
-import {useNavigation } from '@react-navigation/native';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import { MaterialIcons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 
-const Camera = ({ navigation }) => {
-  const [permission, requestPermission] = useCameraPermissions();
+const CameraScreen = ({ navigation }) => {
+  const [hasPermission, setHasPermission] = useState(null);
   const cameraRef = useRef(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [frameInterval, setFrameInterval] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [sound, setSound] = useState();
 
   useEffect(() => {
+    const requestCameraPermission = async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasPermission(status === 'granted');
+    };
+  
+    requestCameraPermission();
     configurePushNotifications();
+  
     return () => {
-      clearInterval(frameInterval);
+      clearInterval(frameInterval); // Cleanup function
     };
   }, []);
+  
+  
 
   const configurePushNotifications = () => {
     Notifications.setNotificationHandler({
@@ -35,7 +44,6 @@ const Camera = ({ navigation }) => {
     });
   };
 
-
   const sendNotification = async (message) => {
     try {
       const response = await Notifications.scheduleNotificationAsync({
@@ -46,7 +54,14 @@ const Camera = ({ navigation }) => {
         trigger: null,
       });
 
-      const notificationTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // Use current time without seconds
+      console.log('Loading Sound');
+      const { sound } = await Audio.Sound.createAsync(require('./fish.wav'));
+      setSound(sound);
+
+      console.log('Playing Sound');
+      await sound.playAsync();
+
+      const notificationTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       console.log('Notification scheduled:', notificationTime);
       if (!notifications.includes(notificationTime)) {
         setNotifications([...notifications, notificationTime]);
@@ -66,7 +81,7 @@ const Camera = ({ navigation }) => {
         } catch (error) {
           console.error('Error processing frame:', error);
         }
-      }, 1000); // Adjust interval as needed
+      }, 1000 / 30); // Adjust the interval for the desired FPS (e.g., 30 FPS)
       setFrameInterval(interval);
     }
   };
@@ -94,15 +109,15 @@ const Camera = ({ navigation }) => {
         method: 'POST',
         url: 'https://detect.roboflow.com/bobber-detection/3',
         params: {
-          api_key: 'zuxqZZaKZVPbzrB23QRP'
+          api_key: 'zuxqZZaKZVPbzrB23QRP',
         },
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        data: `${base64Image}`
+        data: `${base64Image}`,
       });
 
-      console.log("Response Data:", response.data);
+      console.log('Response Data:', response.data);
       const bobberDetected = response.data.predictions.some(
         (prediction) => prediction.class === 'bobbers'
       );
@@ -110,9 +125,6 @@ const Camera = ({ navigation }) => {
       if (!bobberDetected) {
         sendNotification('No bobber detected! Check your line.');
         console.log('No bobber detected! Check your line.');
-      } else {
-        console.log("Bobber detected");
-        sendNotification('Bobber detected! Get ready to reel in!', 'hey');
       }
     } catch (error) {
       console.error('Error detecting bobber:', error);
@@ -133,12 +145,12 @@ const Camera = ({ navigation }) => {
       throw error; // Throw the error instead of returning null
     }
   };
-
-  if (!permission) {
+  console.log(hasPermission);
+  if (hasPermission === null) {
     return <View />;
   }
-
-  if (!permission.granted) {
+  
+  if (hasPermission === false) {
     return (
       <View style={styles.container}>
         <Text style={{ textAlign: 'center' }}>We need your permission to show the camera</Text>
@@ -149,7 +161,7 @@ const Camera = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <CameraView style={styles.camera} ref={cameraRef}>
+      <Camera style={styles.camera} ref={cameraRef}>
         <View style={styles.buttonContainer}>
           {!isStreaming ? (
             <TouchableOpacity style={styles.button} onPress={handleStartStreaming}>
@@ -161,21 +173,20 @@ const Camera = ({ navigation }) => {
             </TouchableOpacity>
           )}
         </View>
-      </CameraView>
-      <Button 
-        title="Go to Notifications" 
+      </Camera>
+      <Button
+        title="Go to Notifications"
         onPress={() => navigation.navigate('Notifications', { notifications })}
       />
       <TouchableOpacity
         style={styles.settingsButton}
-        onPress={() => navigation.navigate('Notifications', { notifications })}
+        onPress={() => navigation.navigate('Settings', { SettingsScreen })}
       >
         <MaterialIcons name="settings" size={24} color="black" />
       </TouchableOpacity>
     </View>
   );
 };
-
 
 const Stack = createNativeStackNavigator();
 
@@ -186,16 +197,16 @@ const SettingsScreen = () => {
   // Function to handle saving settings
   const saveSettings = () => {
     // Implement saving logic here
-    //  selectedFps and selectedInterval to save settings
+    // Use selectedFps and selectedInterval to save settings
     // Example: save to AsyncStorage or database
   };
 
   return (
     <View style={settingStyles.container}>
       <Text style={settingStyles.title}>Settings</Text>
-      
+
       {/* FPS Dropdown */}
-      <View style={stylesettingStyless.settingItem}>
+      <View style={settingStyles.settingItem}>
         <Text style={settingStyles.settingLabel}>Frames per Second (FPS)</Text>
         <Picker
           selectedValue={selectedFps}
@@ -273,7 +284,6 @@ const settingStyles = {
   },
 };
 
-
 function NotificationScreen({ route, navigation }) {
   const { notifications } = route.params;
 
@@ -337,7 +347,6 @@ const NotificationStyles = {
   },
 };
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -375,9 +384,10 @@ const styles = StyleSheet.create({
 function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen name="Camera" component={Camera} />
+      <Stack.Navigator initialRouteName="Camera">
+        <Stack.Screen name="Camera" component={CameraScreen} />
         <Stack.Screen name="Notifications" component={NotificationScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
