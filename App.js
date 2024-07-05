@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Button, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -10,6 +11,7 @@ const CameraComp = ({ navigation }) => {
   const cameraRef = useRef(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [frameInterval, setFrameInterval] = useState(null);
+  const [notificationTimes, setNotificationTimes] = useState([]);
 
   useEffect(() => {
     configurePushNotifications();
@@ -36,6 +38,8 @@ const CameraComp = ({ navigation }) => {
       },
       trigger: null,
     });
+    const currentTime = new Date().toLocaleString();
+    setNotificationTimes((prevTimes) => [...prevTimes, currentTime]);
   };
 
   const handleStartStreaming = async () => {
@@ -74,7 +78,7 @@ const CameraComp = ({ navigation }) => {
     try {
       const response = await axios({
         method: 'POST',
-        url: 'https://detect.roboflow.com/bobber-detection/1',
+        url: 'https://detect.roboflow.com/geese-sheet/8',
         params: {
           api_key: 'zuxqZZaKZVPbzrB23QRP'
         },
@@ -83,18 +87,13 @@ const CameraComp = ({ navigation }) => {
         },
         data: `${base64Image}`
       });
-      console.log("Response Data:", response.data);
-      const bobberDetected = response.data.predictions.some(
-        (prediction) => prediction.class === 'bobber'
-      );
 
-      console.log(bobberDetected);
+      const bobberDetected = response.data.predictions.some(
+        (prediction) => prediction.class === 'droppings'
+      );
 
       if (!bobberDetected) {
         sendNotification('No bobber detected! Check your line.');
-        console.log('No bobber detected! Check your line.');
-      } else {
-        console.log("bobber d3etected");
       }
     } catch (error) {
       console.error('Error detecting bobber:', error);
@@ -144,7 +143,10 @@ const CameraComp = ({ navigation }) => {
           )}
         </View>
       </CameraView>
-      <Button title="Go to Home" onPress={() => navigation.push('Home')} />
+      <Button
+        title="Go to Notifications"
+        onPress={() => navigation.navigate('Notifications', { notifications: notificationTimes })}
+      />
     </View>
   );
 };
