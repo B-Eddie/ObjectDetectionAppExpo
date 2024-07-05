@@ -1,21 +1,25 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, FlatList } from 'react-native';
+import { useRoute } from "@react-navigation/native"
 
-const NotificationScreen = () => {
-  // Dummy data for notifications (replace with actual data)
-  const notifications = [
-    { id: 1, message: 'No bobber detected at 10:00 AM' },
-    { id: 2, message: 'No bobber detected at 12:30 PM' },
-    { id: 3, message: 'No bobber detected at 3:45 PM' },
-  ];
-
+const NotificationScreen = ({ route, navigation }) => {
+  let notifs = ['10:00 AM', '2:00 PM', '6:00 PM', '10:00 PM'];
+  console.log(route.params);
+  const { jefff, param } = route.params;
   return (
     <View style={styles.container}>
-      {notifications.map((notification) => (
-        <View key={notification.id} style={styles.notification}>
-          <Text>{notification.message}</Text>
-        </View>
-      ))}
+      <Text style={styles.title}>Notification Times</Text>
+      <Text style={styles.notificationText}>{JSON.stringify(jefff)}</Text>
+      <Text style={styles.notificationText}>{JSON.stringify(param)}</Text>
+      <FlatList
+        data={notifs}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={({ item }) => (
+          <View style={styles.notificationItem}>
+            <Text style={styles.notificationText}>{item}</Text>
+          </View>
+        )}
+      />
     </View>
   );
 };
@@ -23,17 +27,25 @@ const NotificationScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
   },
-  notification: {
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  notificationItem: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 5,
     padding: 10,
     marginVertical: 5,
     width: '100%',
+  },
+  notificationText: {
+    fontSize: 18,
   },
 });
 

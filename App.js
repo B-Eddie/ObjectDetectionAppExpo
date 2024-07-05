@@ -1,19 +1,22 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Button, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Notifications from 'expo-notifications';
 import axios from 'axios';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { useNavigation } from '@react-navigation/native';
+import NotificationScreen from './NotificationScreen';
+import { createStackNavigator } from '@react-navigation/stack';
+import { NavigationContainer } from '@react-navigation/native';
+import {useNavigation } from '@react-navigation/native';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
-const CameraComp = ({ navigation }) => {
+
+const Camera = ({ navigation }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [frameInterval, setFrameInterval] = useState(null);
-  const [notificationTimes, setNotificationTimes] = useState([]);
-
+  
   useEffect(() => {
     configurePushNotifications();
     return () => {
@@ -39,8 +42,6 @@ const CameraComp = ({ navigation }) => {
       },
       trigger: null,
     });
-    const currentTime = new Date().toLocaleString();
-    setNotificationTimes((prevTimes) => [...prevTimes, currentTime]);
   };
 
   const handleStartStreaming = async () => {
@@ -79,7 +80,7 @@ const CameraComp = ({ navigation }) => {
     try {
       const response = await axios({
         method: 'POST',
-        url: 'https://detect.roboflow.com/geese-sheet/8',
+        url: 'https://detect.roboflow.com/bobber-detection/3',
         params: {
           api_key: 'zuxqZZaKZVPbzrB23QRP'
         },
@@ -88,13 +89,18 @@ const CameraComp = ({ navigation }) => {
         },
         data: `${base64Image}`
       });
-
+      console.log("Response Data:", response.data);
       const bobberDetected = response.data.predictions.some(
-        (prediction) => prediction.class === 'droppings'
+        (prediction) => prediction.class === 'bobbers'
       );
+
+      console.log(bobberDetected);
 
       if (!bobberDetected) {
         sendNotification('No bobber detected! Check your line.');
+        console.log('No bobber detected! Check your line.');
+      } else {
+        console.log("bobber detected");
       }
     } catch (error) {
       console.error('Error detecting bobber:', error);
@@ -128,7 +134,7 @@ const CameraComp = ({ navigation }) => {
       </View>
     );
   }
-  // const navigation = useNavigation();
+
   return (
     <View style={styles.container}>
       <CameraView style={styles.camera} ref={cameraRef}>
@@ -144,13 +150,26 @@ const CameraComp = ({ navigation }) => {
           )}
         </View>
       </CameraView>
-      <Button
-        title="Go to Notifications"
-        onPress={() => navigation.navigate('NotificationScreen')}
+      <Button 
+        title="Go to Notifications" 
+        onPress={() => navigation.navigate('Notifications', {
+          jefff: 2,
+          param: 'anything you want',
+        })}
       />
     </View>
   );
 };
+
+const Stack = createNativeStackNavigator();
+
+function NotificationsScreen() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="Notifications" component={NotificationScreen} />
+    </Stack.Navigator>
+  );
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -180,4 +199,15 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CameraComp;
+function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen name="Camera" component={Camera} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
+export default App;
