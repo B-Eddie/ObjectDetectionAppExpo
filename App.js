@@ -5,6 +5,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Notifications from 'expo-notifications';
 import axios from 'axios';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { useNavigation } from '@react-navigation/native';
 
 const CameraComp = ({ navigation }) => {
   const [permission, requestPermission] = useCameraPermissions();
@@ -127,7 +128,7 @@ const CameraComp = ({ navigation }) => {
       </View>
     );
   }
-
+  // const navigation = useNavigation();
   return (
     <View style={styles.container}>
       <CameraView style={styles.camera} ref={cameraRef}>
@@ -145,7 +146,7 @@ const CameraComp = ({ navigation }) => {
       </CameraView>
       <Button
         title="Go to Notifications"
-        onPress={() => navigation.navigate('Notifications', { notifications: notificationTimes })}
+        onPress={() => navigation.navigate('NotificationScreen')}
       />
     </View>
   );
