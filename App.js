@@ -179,6 +179,101 @@ const Camera = ({ navigation }) => {
 
 const Stack = createNativeStackNavigator();
 
+const SettingsScreen = () => {
+  const [selectedFps, setSelectedFps] = useState('30'); // Default FPS
+  const [selectedInterval, setSelectedInterval] = useState('5'); // Default interval in minutes
+
+  // Function to handle saving settings
+  const saveSettings = () => {
+    // Implement saving logic here
+    //  selectedFps and selectedInterval to save settings
+    // Example: save to AsyncStorage or database
+  };
+
+  return (
+    <View style={settingStyles.container}>
+      <Text style={settingStyles.title}>Settings</Text>
+      
+      {/* FPS Dropdown */}
+      <View style={stylesettingStyless.settingItem}>
+        <Text style={settingStyles.settingLabel}>Frames per Second (FPS)</Text>
+        <Picker
+          selectedValue={selectedFps}
+          style={settingStyles.picker}
+          onValueChange={(itemValue) => setSelectedFps(itemValue)}
+        >
+          <Picker.Item label="15" value="15" />
+          <Picker.Item label="30" value="30" />
+          <Picker.Item label="60" value="60" />
+          {/*  more options */}
+        </Picker>
+      </View>
+
+      {/* Notification Interval Dropdown */}
+      <View style={settingStyles.settingItem}>
+        <Text style={settingStyles.settingLabel}>Notification Interval (minutes)</Text>
+        <Picker
+          selectedValue={selectedInterval}
+          style={settingStyles.picker}
+          onValueChange={(itemValue) => setSelectedInterval(itemValue)}
+        >
+          <Picker.Item label="5" value="5" />
+          <Picker.Item label="10" value="10" />
+          <Picker.Item label="15" value="15" />
+          {/* Add more options as needed */}
+        </Picker>
+      </View>
+
+      {/* Save Button */}
+      <TouchableOpacity style={settingStyles.saveButton} onPress={saveSettings}>
+        <Text style={settingStyles.saveButtonText}>Save Settings</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const settingStyles = {
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  settingItem: {
+    marginBottom: 20,
+    width: '100%',
+  },
+  settingLabel: {
+    fontSize: 18,
+    marginBottom: 10,
+  },
+  picker: {
+    height: 40,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
+  saveButton: {
+    backgroundColor: '#007bff',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+};
+
+
 function NotificationScreen({ route, navigation }) {
   const { notifications } = route.params;
 
