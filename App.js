@@ -1,22 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Button, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Button, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Notifications from 'expo-notifications';
 import axios from 'axios';
 import * as ImageManipulator from 'expo-image-manipulator';
-import NotificationScreen from './NotificationScreen';
+// import NotificationScreen from './NotificationScreen';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import {useNavigation } from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-
+import { MaterialIcons } from '@expo/vector-icons';
 
 const Camera = ({ navigation }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [frameInterval, setFrameInterval] = useState(null);
-  
+  const [notifications, setNotifications] = useState([]);
+
   useEffect(() => {
     configurePushNotifications();
     return () => {
@@ -34,14 +35,25 @@ const Camera = ({ navigation }) => {
     });
   };
 
-  const sendNotification = (message) => {
-    Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Fishing Alert',
-        body: message,
-      },
-      trigger: null,
-    });
+
+  const sendNotification = async (message) => {
+    try {
+      const response = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Fishing Alert',
+          body: message,
+        },
+        trigger: null,
+      });
+
+      const notificationTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // Use current time without seconds
+      console.log('Notification scheduled:', notificationTime);
+      if (!notifications.includes(notificationTime)) {
+        setNotifications([...notifications, notificationTime]);
+      }
+    } catch (error) {
+      console.error('Error scheduling notification:', error);
+    }
   };
 
   const handleStartStreaming = async () => {
@@ -89,18 +101,18 @@ const Camera = ({ navigation }) => {
         },
         data: `${base64Image}`
       });
+
       console.log("Response Data:", response.data);
       const bobberDetected = response.data.predictions.some(
         (prediction) => prediction.class === 'bobbers'
       );
 
-      console.log(bobberDetected);
-
       if (!bobberDetected) {
         sendNotification('No bobber detected! Check your line.');
         console.log('No bobber detected! Check your line.');
       } else {
-        console.log("bobber detected");
+        console.log("Bobber detected");
+        sendNotification('Bobber detected! Get ready to reel in!', 'hey');
       }
     } catch (error) {
       console.error('Error detecting bobber:', error);
@@ -152,24 +164,84 @@ const Camera = ({ navigation }) => {
       </CameraView>
       <Button 
         title="Go to Notifications" 
-        onPress={() => navigation.navigate('Notifications', {
-          jefff: 2,
-          param: 'anything you want',
-        })}
+        onPress={() => navigation.navigate('Notifications', { notifications })}
       />
+      <TouchableOpacity
+        style={styles.settingsButton}
+        onPress={() => navigation.navigate('Notifications', { notifications })}
+      >
+        <MaterialIcons name="settings" size={24} color="black" />
+      </TouchableOpacity>
     </View>
   );
 };
 
+
 const Stack = createNativeStackNavigator();
 
-function NotificationsScreen() {
+function NotificationScreen({ route, navigation }) {
+  const { notifications } = route.params;
+
   return (
-    <Stack.Navigator>
-      <Stack.Screen name="Notifications" component={NotificationScreen} />
-    </Stack.Navigator>
+    <View style={NotificationStyles.container}>
+      <Text style={NotificationStyles.title}>Notification Times</Text>
+      <Text>When the bobber is not detected</Text>
+      <FlatList
+        data={notifications}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={({ item }) => (
+          <View style={NotificationStyles.notificationItem}>
+            <Text style={NotificationStyles.notificationText}>{item}</Text>
+          </View>
+        )}
+      />
+      <TouchableOpacity
+        style={NotificationStyles.backButton}
+        onPress={() => navigation.navigate('Camera')}
+      >
+        <Text style={NotificationStyles.backButtonText}>Back</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
+
+const NotificationStyles = {
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  notificationItem: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
+    marginVertical: 5,
+    width: '100%',
+  },
+  notificationText: {
+    fontSize: 18,
+  },
+  backButton: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#ccc',
+    borderRadius: 5,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'black',
+  },
+};
+
 
 const styles = StyleSheet.create({
   container: {
@@ -197,6 +269,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  settingsButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    padding: 10,
+  },
 });
 
 function App() {
@@ -204,7 +282,7 @@ function App() {
     <NavigationContainer>
       <Stack.Navigator>
         <Stack.Screen name="Camera" component={Camera} />
-        <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="Notifications" component={NotificationScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
