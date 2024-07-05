@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Button, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { Camera } from 'expo-camera';
+import { CameraView } from 'expo-camera'; // Updated import for CameraView
 import * as Notifications from 'expo-notifications';
 import axios from 'axios';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -20,19 +20,22 @@ const CameraScreen = ({ navigation }) => {
 
   useEffect(() => {
     const requestCameraPermission = async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
+      try {
+        const { status } = await CameraView.requestCameraPermissionsAsync();
+        setHasPermission(status === 'granted');
+      } catch (error) {
+        console.error('Error requesting camera permission:', error);
+        setHasPermission(false);
+      }
     };
-  
+
     requestCameraPermission();
     configurePushNotifications();
-  
+
     return () => {
-      clearInterval(frameInterval); // Cleanup function
+      clearInterval(frameInterval);
     };
   }, []);
-  
-  
 
   const configurePushNotifications = () => {
     Notifications.setNotificationHandler({
@@ -81,7 +84,7 @@ const CameraScreen = ({ navigation }) => {
         } catch (error) {
           console.error('Error processing frame:', error);
         }
-      }, 1000 / 30); // Adjust the interval for the desired FPS (e.g., 30 FPS)
+      }, 1000 / 1); // Adjust the interval for the desired FPS
       setFrameInterval(interval);
     }
   };
@@ -142,26 +145,30 @@ const CameraScreen = ({ navigation }) => {
       return resizedImage.base64;
     } catch (error) {
       console.error('Error resizing image:', error);
-      throw error; // Throw the error instead of returning null
+      throw error;
     }
   };
-  console.log(hasPermission);
+
   if (hasPermission === null) {
     return <View />;
   }
-  
+
   if (hasPermission === false) {
     return (
       <View style={styles.container}>
         <Text style={{ textAlign: 'center' }}>We need your permission to show the camera</Text>
-        <Button onPress={requestPermission} title="Grant Permission" />
+        <Button onPress={requestCameraPermission} title="Grant Permission" />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Camera style={styles.camera} ref={cameraRef}>
+      <CameraView
+        style={styles.camera}
+        type={CameraView.Constants.Type.back} // Set camera type as needed
+        ref={cameraRef}
+      >
         <View style={styles.buttonContainer}>
           {!isStreaming ? (
             <TouchableOpacity style={styles.button} onPress={handleStartStreaming}>
@@ -173,7 +180,7 @@ const CameraScreen = ({ navigation }) => {
             </TouchableOpacity>
           )}
         </View>
-      </Camera>
+      </CameraView>
       <Button
         title="Go to Notifications"
         onPress={() => navigation.navigate('Notifications', { notifications })}
@@ -194,7 +201,6 @@ const SettingsScreen = () => {
   const [selectedFps, setSelectedFps] = useState('30'); // Default FPS
   const [selectedInterval, setSelectedInterval] = useState('5'); // Default interval in minutes
 
-  // Function to handle saving settings
   const saveSettings = () => {
     // Implement saving logic here
     // Use selectedFps and selectedInterval to save settings
@@ -216,7 +222,6 @@ const SettingsScreen = () => {
           <Picker.Item label="15" value="15" />
           <Picker.Item label="30" value="30" />
           <Picker.Item label="60" value="60" />
-          {/*  more options */}
         </Picker>
       </View>
 
@@ -231,7 +236,6 @@ const SettingsScreen = () => {
           <Picker.Item label="5" value="5" />
           <Picker.Item label="10" value="10" />
           <Picker.Item label="15" value="15" />
-          {/* Add more options as needed */}
         </Picker>
       </View>
 
@@ -264,12 +268,8 @@ const settingStyles = {
     marginBottom: 10,
   },
   picker: {
-    height: 40,
+    height: 50,
     width: '100%',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 10,
   },
   saveButton: {
     backgroundColor: '#007bff',

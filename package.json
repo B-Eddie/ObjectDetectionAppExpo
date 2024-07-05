@@ -15,9 +15,11 @@
     "@react-navigation/stack": "^6.4.0",
     "axios": "^1.7.2",
     "expo": "~51.0.17",
-    "expo-camera": "~15.0.12",
+    "expo-av": "~14.0.6",
+    "expo-camera": "~15.0.13",
     "expo-image-manipulator": "~12.0.5",
     "expo-notifications": "~0.28.9",
+    "expo-permissions": "^14.4.0",
     "expo-status-bar": "~1.12.1",
     "fs-extra": "^11.2.0",
     "react": "^18.2.0",
@@ -32,7 +34,7 @@
     "react-native-tflite": "^0.0.2",
     "react-native-vector-icons": "^10.1.0",
     "react-native-vision-camera": "^4.4.0",
-    "expo-av": "~14.0.6"
+    "expo-modules-core": "~1.12.18"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
