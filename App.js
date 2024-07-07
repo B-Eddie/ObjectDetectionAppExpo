@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Button, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import { View, Button, Text, TouchableOpacity, StyleSheet, FlatList, TextInput } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
+import { Slider } from '@react-native-community/slider';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Notifications from 'expo-notifications';
 import axios from 'axios';
@@ -20,6 +22,7 @@ const Camera = ({ navigation }) => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [frameInterval, setFrameInterval] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [selectedFps, setSelectedFps] = useState('30'); // Default FPS
 
   useEffect(() => {
     configurePushNotifications();
@@ -60,24 +63,36 @@ const Camera = ({ navigation }) => {
   };
 
   const handleStartStreaming = async () => {
-    if (cameraRef.current && !isStreaming) {
-      setIsStreaming(true);
-      const interval = setInterval(async () => {
+    if (!cameraRef || isStreaming) {
+      return; // If camera is not initialized or already streaming, return early
+    }
+  
+    setIsStreaming(true);
+  
+    try {
+      const frameInterval = setInterval(async () => {
         try {
           const frame = await captureFrame();
-          await processFrame(frame);
+          if (frame) {
+            await processFrame(frame);
+          }
         } catch (error) {
           console.error('Error processing frame:', error);
         }
-      }, 1000); // Adjust interval as needed
-      setFrameInterval(interval);
+      }, 1000 * parseInt(selectedFps));
+  
+      setFrameInterval(frameInterval);
+    } catch (error) {
+      console.error('Error starting streaming:', error);
+      setIsStreaming(false);
     }
   };
-
+  
   const handleStopStreaming = () => {
     setIsStreaming(false);
     clearInterval(frameInterval);
   };
+  
 
   const captureFrame = async () => {
     if (cameraRef.current) {
@@ -165,16 +180,22 @@ const Camera = ({ navigation }) => {
           )}
         </View>
       </CameraView>
-      <Button 
-        title="Go to Notifications" 
-        onPress={() => navigation.navigate('Notifications', { notifications })}
-      />
+       
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.settingsButton}
-          onPress={() => navigation.navigate('Settings', { SettingsScreen })}
+          onPress={() => navigation.navigate('Settings', { selectedFps, setSelectedFps })}
         >
-          <MaterialIcons name="settings" size={24} color="black" />
+          <MaterialIcons name="settings" size={24} color="white" />
+        </TouchableOpacity>
+
+        <Text style={styles.howtouse} onPress={() => navigation.navigate('HowToUse')}>HowToUse</Text>
+
+        <TouchableOpacity
+          style={styles.notificationsButton}
+          onPress={() => navigation.navigate('Notifications', { notifications })}
+        >
+          <MaterialIcons name="notifications" size={24} color="white" />
         </TouchableOpacity>
       </View>
     </View>
@@ -210,9 +231,25 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     position: 'absolute',
-    top: 20,
+    top: 0,
+    bottom: 0,
     right: 20,
+    justifyContent: 'center', // Center vertically
     padding: 10,
+  },
+  notificationsButton: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 20,
+    justifyContent: 'center', // Center vertically
+    padding: 10,
+  },
+  howtouse: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   topBar: {
     position: 'absolute',
@@ -221,53 +258,40 @@ const styles = StyleSheet.create({
     right: 0,
     height: 50,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center', // Center vertically
   },
 });
 
 
-const SettingsScreen = () => {
-  const [selectedFps, setSelectedFps] = useState('30'); // Default FPS
-  const [selectedInterval, setSelectedInterval] = useState('5'); // Default interval in minutes
-
+const SettingsScreen = ({ navigation, route }) => {
+  const { selectedFps, setSelectedFps } = route.params;
   // Function to handle saving settings
-  const saveSettings = () => {
-    // Implement saving logic here
-    //  selectedFps and selectedInterval to save settings
-    // Example: save to AsyncStorage or database
+  const saveSettings = async () => {
+    try {
+      await AsyncStorage.setItem('selectedFps', selectedFps);
+      console.log('Settings saved successfully:', selectedFps);
+      navigation.goBack()
+      // Optionally, you can add a confirmation or navigate back
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      // Handle error saving settings
+    }
   };
 
   return (
     <View style={settingStyles.container}>
       <Text style={settingStyles.title}>Settings</Text>
-      
-      {/* FPS Dropdown */}
-      <View style={settingStyles.settingItem}>
-        <Text style={settingStyles.settingLabel}>Frames per Second (FPS)</Text>
-        <Picker
-          selectedValue={selectedFps}
-          style={settingStyles.picker}
-          onValueChange={(itemValue) => setSelectedFps(itemValue)}
-        >
-          <Picker.Item label="15" value="15" />
-          <Picker.Item label="30" value="30" />
-          <Picker.Item label="60" value="60" />
-          {/*  more options */}
-        </Picker>
-      </View>
 
-      {/* Notification Interval Dropdown */}
+      {/* FPS Input */}
       <View style={settingStyles.settingItem}>
-        <Text style={settingStyles.settingLabel}>Notification Interval (minutes)</Text>
-        <Picker
-          selectedValue={selectedInterval}
-          style={settingStyles.picker}
-          onValueChange={(itemValue) => setSelectedInterval(itemValue)}
-        >
-          <Picker.Item label="5" value="5" />
-          <Picker.Item label="10" value="10" />
-          <Picker.Item label="15" value="15" />
-          {/* Add more options as needed */}
-        </Picker>
+        <Text style={settingStyles.settingLabel}>Caputre Interval (Second)</Text>
+        <TextInput
+          style={settingStyles.input}
+          // value={selectedFps}
+          onChangeText={setSelectedFps}
+          keyboardType="numeric"
+          placeholder="Enter Interval"
+        />
       </View>
 
       {/* Save Button */}
@@ -278,12 +302,13 @@ const SettingsScreen = () => {
   );
 };
 
-const settingStyles = {
+const settingStyles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    marginTop: 50,
   },
   title: {
     fontSize: 24,
@@ -298,13 +323,13 @@ const settingStyles = {
     fontSize: 18,
     marginBottom: 10,
   },
-  picker: {
+  input: {
     height: 40,
-    width: '100%',
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 8,
     paddingHorizontal: 10,
+    width: '100%',
   },
   saveButton: {
     backgroundColor: '#007bff',
@@ -317,7 +342,7 @@ const settingStyles = {
     fontSize: 18,
     fontWeight: 'bold',
   },
-};
+});
 
 
 function NotificationScreen({ route, navigation }) {
@@ -383,6 +408,56 @@ const NotificationStyles = {
   },
 };
 
+const HowToUseScreen = () => {
+  return (
+    <View style={howToUseStyles.container}>
+      <Text style={howToUseStyles.title}>How to Use</Text>
+      <Text style={howToUseStyles.description}>
+      1. Place your phone securely, facing towards your fishing bobber.
+      {'\n'}
+      {'\n'}
+      2. Open the app and grant camera permissions if prompted.
+      {'\n'}
+      {'\n'}
+      3. Tap "Start Streaming" to begin monitoring for bobber movements.
+      {'\n'}
+      {'\n'}
+      4. Adjust the Frames Per Second (FPS) setting if needed in the settings.
+      {'\n'}
+      {'\n'}
+      5. If a bobber is detected, you'll receive a notification.
+      {'\n'}
+      {'\n'}
+      6. Tap "Stop Streaming" when finished or as needed.
+      {'\n'}
+      {'\n'}
+      7. Review notification times in the Notifications section.
+      {'\n'}
+      {'\n'}
+      8. For more details or help, visit the Help/FAQ section in the app.
+    </Text>
+    </View>
+  );
+};
+
+const howToUseStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  description: {
+    fontSize: 18,
+    textAlign: 'left',
+  },
+});
+
 function App() {
   return (
     <NavigationContainer>
@@ -390,6 +465,7 @@ function App() {
         <Stack.Screen name="Camera" component={Camera} />
         <Stack.Screen name="Notifications" component={NotificationScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="HowToUse" component={HowToUseScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
