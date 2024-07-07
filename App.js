@@ -1,18 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Button, Text, TouchableOpacity, StyleSheet, FlatList, TextInput } from 'react-native';
+import { View, Button, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Picker } from '@react-native-picker/picker';
-import { Slider } from '@react-native-community/slider';
+import { Slider }  from '@react-native-community/slider';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Notifications from 'expo-notifications';
 import axios from 'axios';
 import * as ImageManipulator from 'expo-image-manipulator';
-// import NotificationScreen from './NotificationScreen';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
-import {useNavigation } from '@react-navigation/native';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialIcons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 
 const Stack = createNativeStackNavigator();
 
@@ -21,13 +20,17 @@ const Camera = ({ navigation }) => {
   const cameraRef = useRef(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [frameInterval, setFrameInterval] = useState(null);
+  const [selectedFps, setSelectedFps] = useState('1');
   const [notifications, setNotifications] = useState([]);
-  const [selectedFps, setSelectedFps] = useState('30'); // Default FPS
+  const [notificationSound] = useState(new Audio.Sound());
 
   useEffect(() => {
     configurePushNotifications();
+    loadNotificationSound();
+    
     return () => {
       clearInterval(frameInterval);
+      notificationSound.unloadAsync();
     };
   }, []);
 
@@ -39,6 +42,22 @@ const Camera = ({ navigation }) => {
         shouldSetBadge: true,
       }),
     });
+  };
+
+  const loadNotificationSound = async () => {
+    try {
+      await notificationSound.loadAsync(require('./fish.wav'));
+    } catch (error) {
+      console.error('Error loading notification sound:', error);
+    }
+  };
+
+  const playNotificationSound = async () => {
+    try {
+      await notificationSound.replayAsync();
+    } catch (error) {
+      console.error('Error playing notification sound:', error);
+    }
   };
 
 
@@ -53,7 +72,7 @@ const Camera = ({ navigation }) => {
       });
 
       const notificationTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // Use current time without seconds
-      console.log('Notification scheduled:', notificationTime);
+      playNotificationSound();
       if (!notifications.includes(notificationTime)) {
         setNotifications([...notifications, notificationTime]);
       }
@@ -64,34 +83,23 @@ const Camera = ({ navigation }) => {
 
   const handleStartStreaming = async () => {
     if (cameraRef.current && !isStreaming) {
-  
       setIsStreaming(true);
-    
-      try {
-        const frameInterval = setInterval(async () => {
-          try {
-            const frame = await captureFrame();
-            if (frame) {
-              await processFrame(frame);
-            }
-          } catch (error) {
-            console.error('Error processing frame:', error);
-          }
-        }, 1000 * parseInt(selectedFps));
-    
-        setFrameInterval(frameInterval);
-      } catch (error) {
-        console.error('Error starting streaming:', error);
-        setIsStreaming(false);
-      }
+      const interval = setInterval(async () => {
+        try {
+          const frame = await captureFrame();
+          await processFrame(frame);
+        } catch (error) {
+          console.error('Error processing frame:', error);
+        }
+      }, 1000 * parseInt(selectedFps));
+      setFrameInterval(interval);
     }
   };
-  
+
   const handleStopStreaming = () => {
     setIsStreaming(false);
     clearInterval(frameInterval);
   };
-  
 
   const captureFrame = async () => {
     if (cameraRef.current) {
@@ -125,14 +133,24 @@ const Camera = ({ navigation }) => {
       );
 
       if (!bobberDetected) {
+        incrementLifetimeBobbersNotDetected();
         sendNotification('No bobber detected! Check your line.');
         console.log('No bobber detected! Check your line.');
-      } else {
-        console.log("Bobber detected");
-        sendNotification('Bobber detected! Get ready to reel in!', 'hey');
-      }
+      } 
     } catch (error) {
       console.error('Error detecting bobber:', error);
+    }
+  };
+
+  const incrementLifetimeBobbersNotDetected = async () => {
+    try {
+      let currentLifetimeCount = await AsyncStorage.getItem('lifetimeBobbersNotDetected');
+      currentLifetimeCount = currentLifetimeCount ? parseInt(currentLifetimeCount) : 0;
+      const newLifetimeCount = currentLifetimeCount + 1;
+      await AsyncStorage.setItem('lifetimeBobbersNotDetected', newLifetimeCount.toString());
+      console.log('Lifetime bobbers not detected incremented:', newLifetimeCount);
+    } catch (error) {
+      console.error('Error incrementing lifetime bobbers not detected:', error);
     }
   };
 
@@ -179,7 +197,7 @@ const Camera = ({ navigation }) => {
           )}
         </View>
       </CameraView>
-       
+      
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.settingsButton}
@@ -188,19 +206,23 @@ const Camera = ({ navigation }) => {
           <MaterialIcons name="settings" size={24} color="white" />
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={styles.notificationsButton}
+          onPress={() => navigation.navigate('Notifications', {notifications})}>
+          <MaterialIcons name="notifications" size={24} color="white" />
+        </TouchableOpacity>
+
         <Text style={styles.howtouse} onPress={() => navigation.navigate('HowToUse')}>HowToUse</Text>
 
         <TouchableOpacity
-          style={styles.notificationsButton}
-          onPress={() => navigation.navigate('Notifications', { notifications })}
-        >
-          <MaterialIcons name="notifications" size={24} color="white" />
+          style={styles.profileButton}
+          onPress={() => navigation.navigate('Profile')}>
+          <MaterialIcons name="person" size={24} color="white" />
         </TouchableOpacity>
       </View>
     </View>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {
@@ -232,7 +254,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     bottom: 0,
-    right: 20,
+    left: 20,
     justifyContent: 'center', // Center vertically
     padding: 10,
   },
@@ -240,7 +262,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     bottom: 0,
-    left: 20,
+    left: 70,
     justifyContent: 'center', // Center vertically
     padding: 10,
   },
@@ -249,6 +271,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'center',
+    width: 200,
+    left: 120,
+  },
+  profileButton: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: 20,
+    justifyContent: 'center', // Center vertically
+    padding: 10,
   },
   topBar: {
     position: 'absolute',
@@ -261,16 +293,21 @@ const styles = StyleSheet.create({
   },
 });
 
-
 const SettingsScreen = ({ navigation, route }) => {
-  const { selectedFps, setSelectedFps } = route.params;
-  // Function to handle saving settings
+  const { selectedFps: initialSelectedFps, setSelectedFps } = route.params;
+  const [selectedFps, setSelectedFpsState] = useState(initialSelectedFps);
+
   const saveSettings = async () => {
+    // Check if selectedFps is lower than 1
+    if (parseInt(selectedFps) < 1) {
+      Alert.alert('Error', 'Capture Interval must be 1 or higher.');
+      return;
+    }
+
     try {
       await AsyncStorage.setItem('selectedFps', selectedFps);
       console.log('Settings saved successfully:', selectedFps);
-      navigation.goBack()
-      // Optionally, you can add a confirmation or navigate back
+      navigation.goBack();
     } catch (error) {
       console.error('Error saving settings:', error);
       // Handle error saving settings
@@ -283,11 +320,11 @@ const SettingsScreen = ({ navigation, route }) => {
 
       {/* FPS Input */}
       <View style={settingStyles.settingItem}>
-        <Text style={settingStyles.settingLabel}>Caputre Interval (Second)</Text>
+        <Text style={settingStyles.settingLabel}>Capture Interval (Second)</Text>
         <TextInput
           style={settingStyles.input}
-          // value={selectedFps}
-          onChangeText={setSelectedFps}
+          value={selectedFps}
+          onChangeText={(value) => setSelectedFpsState(value)}
           keyboardType="numeric"
           placeholder="Enter Interval"
         />
@@ -301,13 +338,14 @@ const SettingsScreen = ({ navigation, route }) => {
   );
 };
 
+
 const settingStyles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
-    marginTop: 50,
+    marginBottom: 200,
   },
   title: {
     fontSize: 24,
@@ -342,7 +380,6 @@ const settingStyles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-
 
 function NotificationScreen({ route, navigation }) {
   const { notifications } = route.params;
@@ -412,29 +449,22 @@ const HowToUseScreen = () => {
     <View style={howToUseStyles.container}>
       <Text style={howToUseStyles.title}>How to Use</Text>
       <Text style={howToUseStyles.description}>
-      1. Place your phone securely, facing towards your fishing bobber.
-      {'\n'}
-      {'\n'}
-      2. Open the app and grant camera permissions if prompted.
-      {'\n'}
-      {'\n'}
-      3. Tap "Start Streaming" to begin monitoring for bobber movements.
-      {'\n'}
-      {'\n'}
-      4. Adjust the Frames Per Second (FPS) setting if needed in the settings.
-      {'\n'}
-      {'\n'}
-      5. If a bobber is detected, you'll receive a notification.
-      {'\n'}
-      {'\n'}
-      6. Tap "Stop Streaming" when finished or as needed.
-      {'\n'}
-      {'\n'}
-      7. Review notification times in the Notifications section.
-      {'\n'}
-      {'\n'}
-      8. For more details or help, visit the Help/FAQ section in the app.
-    </Text>
+        1. Place your phone securely, facing towards your fishing bobber.
+        {'\n\n'}
+        2. Open the app and grant camera permissions if prompted.
+        {'\n\n'}
+        3. Tap "Start Streaming" to begin monitoring for bobber movements.
+        {'\n\n'}
+        4. Adjust the capture interval setting if needed in the settings.
+        {'\n\n'}
+        5. If a bobber is detected, you'll receive a notification.
+        {'\n\n'}
+        6. Tap "Stop Streaming" when finished or as needed.
+        {'\n\n'}
+        7. Review notification times in the Notifications section.
+        {'\n\n'}
+        8. For more details or help, visit the Help/FAQ section in the app.
+      </Text>
     </View>
   );
 };
@@ -457,6 +487,63 @@ const howToUseStyles = StyleSheet.create({
   },
 });
 
+const ProfileScreen = () => {
+  const [lifetimeBobbersNotDetected, setLifetimeBobbersNotDetected] = useState(0);
+
+  useEffect(() => {
+    // Fetch and calculate lifetime statistics from AsyncStorage or API
+    const fetchLifetimeStats = async () => {
+      try {
+        const bobbersNotDetected = await AsyncStorage.getItem('lifetimeBobbersNotDetected');
+        if (bobbersNotDetected !== null) {
+          setLifetimeBobbersNotDetected(parseInt(bobbersNotDetected));
+        }
+      } catch (error) {
+        console.error('Error fetching lifetime statistics:', error);
+      }
+    };
+
+    fetchLifetimeStats();
+  }, []);
+
+  return (
+    <View style={profilestyles.container}>
+      <Text style={profilestyles.title}>Profile</Text>
+      <View style={profilestyles.statistic}>
+        <Text style={profilestyles.statisticLabel}>Lifetime Bobbers Not Detected:</Text>
+        <Text style={profilestyles.statisticValue}>{lifetimeBobbersNotDetected}</Text>
+      </View>
+    </View>
+  );
+};
+
+const profilestyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  statistic: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  statisticLabel: {
+    fontSize: 18,
+    marginRight: 10,
+  },
+  statisticValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+});
+
 function App() {
   return (
     <NavigationContainer>
@@ -465,6 +552,7 @@ function App() {
         <Stack.Screen name="Notifications" component={NotificationScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="HowToUse" component={HowToUseScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
