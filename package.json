@@ -4,8 +4,8 @@
   "main": "expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
   "dependencies": {
@@ -36,7 +36,7 @@
     "react-native-sound-player": "^0.14.3",
     "react-native-tflite": "^0.0.2",
     "react-native-vector-icons": "^10.1.0",
-    "react-native-vision-camera": "^4.4.0"
+    "react-native-vision-camera": "^4.4.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"

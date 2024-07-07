@@ -14,17 +14,21 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "This app uses the camera to scan objects."
-      }
+        "NSCameraUsageDescription": "$(PRODUCT_NAME) needs access to your camera"
+      },
+      "bundleIdentifier": "com.ObjectDetectionApp"
     },
     "android": {
       "permissions": [
-        "CAMERA"
+        "CAMERA",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./frame_0248.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.ObjectDetectionApp"
     },
     "web": {
       "favicon": "./frame_0248.png"
@@ -38,7 +42,13 @@
           "recordAudioAndroid": true
         }
       ],
-      "expo-video"
+      "expo-video",
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "$(PRODUCT_NAME) needs access to your camera"
+        }
+      ]
     ]
   }
 }
