@@ -63,28 +63,27 @@ const Camera = ({ navigation }) => {
   };
 
   const handleStartStreaming = async () => {
-    if (!cameraRef || isStreaming) {
-      return; // If camera is not initialized or already streaming, return early
-    }
+    if (cameraRef.current && !isStreaming) {
   
-    setIsStreaming(true);
-  
-    try {
-      const frameInterval = setInterval(async () => {
-        try {
-          const frame = await captureFrame();
-          if (frame) {
-            await processFrame(frame);
+      setIsStreaming(true);
+    
+      try {
+        const frameInterval = setInterval(async () => {
+          try {
+            const frame = await captureFrame();
+            if (frame) {
+              await processFrame(frame);
+            }
+          } catch (error) {
+            console.error('Error processing frame:', error);
           }
-        } catch (error) {
-          console.error('Error processing frame:', error);
-        }
-      }, 1000 * parseInt(selectedFps));
-  
-      setFrameInterval(frameInterval);
-    } catch (error) {
-      console.error('Error starting streaming:', error);
-      setIsStreaming(false);
+        }, 1000 * parseInt(selectedFps));
+    
+        setFrameInterval(frameInterval);
+      } catch (error) {
+        console.error('Error starting streaming:', error);
+        setIsStreaming(false);
+      }
     }
   };
   
