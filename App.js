@@ -1,5 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Button, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, Alert, Vibration, Animated, Easing } from 'react-native';
+import { 
+  View, 
+  Button, 
+  Text, 
+  TouchableOpacity, 
+  StyleSheet, 
+  FlatList,
+  TextInput, 
+  Alert, 
+  Vibration, 
+  Animated, 
+  Easing,
+  KeyboardAvoidingView,
+  Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Slider }  from '@react-native-community/slider';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -20,7 +33,7 @@ const Camera = ({ navigation }) => {
   const cameraRef = useRef(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [frameInterval, setFrameInterval] = useState(null);
-  const [selectedFps, setSelectedFps] = useState('1');
+  const [selectedFps, setSelectedFps] = useState(1);
   const [notifications, setNotifications] = useState([]);
   const [notificationSound] = useState(new Audio.Sound());
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -128,8 +141,6 @@ const Camera = ({ navigation }) => {
         },
         data: `${base64Image}`
       });
-
-      console.log("Response Data:", response.data);
       const bobberDetected = response.data.predictions.some(
         (prediction) => prediction.class === 'bobbers'
       );
@@ -137,7 +148,6 @@ const Camera = ({ navigation }) => {
       if (!bobberDetected) {
         incrementLifetimeBobbersNotDetected();
         sendNotification('No bobber detected! Check your line.');
-        console.log('No bobber detected! Check your line.');
       } 
     } catch (error) {
       console.error('Error detecting bobber:', error);
@@ -150,7 +160,6 @@ const Camera = ({ navigation }) => {
       currentLifetimeCount = currentLifetimeCount ? parseInt(currentLifetimeCount) : 0;
       const newLifetimeCount = currentLifetimeCount + 1;
       await AsyncStorage.setItem('lifetimeBobbersNotDetected', newLifetimeCount.toString());
-      console.log('Lifetime bobbers not detected incremented:', newLifetimeCount);
     } catch (error) {
       console.error('Error incrementing lifetime bobbers not detected:', error);
     }
@@ -339,35 +348,37 @@ const SettingsScreen = ({ navigation, route }) => {
 
     try {
       await AsyncStorage.setItem('selectedFps', selectedFps);
-      console.log('Settings saved successfully:', selectedFps);
       navigation.goBack();
     } catch (error) {
       console.error('Error saving settings:', error);
       // Handle error saving settings
     }
   };
-
   return (
-    <View style={settingStyles.container}>
-      <Text style={settingStyles.title}>Settings</Text>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={settingStyles.container}>
+      <View style={settingStyles.container}>
+        <Text style={settingStyles.title}>Settings</Text>
 
-      {/* FPS Input */}
-      <View style={settingStyles.settingItem}>
-        <Text style={settingStyles.settingLabel}>Capture Interval (Second)</Text>
-        <TextInput
-          style={settingStyles.input}
-          value={selectedFps}
-          onChangeText={(value) => setSelectedFpsState(value)}
-          keyboardType="numeric"
-          placeholder="Enter Interval"
-        />
+        {/* FPS Input */}
+        <View style={settingStyles.settingItem}>
+          <Text style={settingStyles.settingLabel}>Capture Interval (Second)</Text>
+          <TextInput
+            style={settingStyles.input}
+            value={selectedFps}
+            onChangeText={(value) => setSelectedFpsState(value)}
+            keyboardType="numeric"
+            placeholder="Enter Interval"
+          />
+        </View>
+
+        {/* Save Button */}
+        <TouchableOpacity style={settingStyles.saveButton} onPress={saveSettings}>
+          <Text style={settingStyles.saveButtonText}>Save Settings</Text>
+        </TouchableOpacity>
       </View>
-
-      {/* Save Button */}
-      <TouchableOpacity style={settingStyles.saveButton} onPress={saveSettings}>
-        <Text style={settingStyles.saveButtonText}>Save Settings</Text>
-      </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -388,6 +399,7 @@ const settingStyles = StyleSheet.create({
   settingItem: {
     marginBottom: 20,
     width: '100%',
+    alignItems: 'center', // Center the input
   },
   settingLabel: {
     fontSize: 24,
@@ -400,8 +412,9 @@ const settingStyles = StyleSheet.create({
     borderColor: '#ccc',
     borderRadius: 8,
     paddingHorizontal: 10,
-    width: '100%',
+    width: '500%',
     backgroundColor: '#FFFFFF', // White
+    textAlign: 'center', // Center the text
   },
   saveButton: {
     backgroundColor: '#27AE60', // Emerald green
@@ -425,15 +438,19 @@ const NotificationScreen = ({ route, navigation }) => {
     <View style={NotificationStyles.container}>
       <Text style={NotificationStyles.title}>Notification Times</Text>
       <Text style={NotificationStyles.subtitle}>When the bobber is not detected</Text>
-      <FlatList
-        data={notifications}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <View style={NotificationStyles.notificationItem}>
-            <Text style={NotificationStyles.notificationText}>{item}</Text>
-          </View>
-        )}
-      />
+      {notifications.length === 0 ? (
+        <Text style={NotificationStyles.no}>No notifications</Text>
+      ) : (
+        <FlatList
+          data={notifications}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item }) => (
+            <View style={NotificationStyles.notificationItem}>
+              <Text style={NotificationStyles.notificationText}>{item}</Text>
+            </View>
+          )}
+        />
+      )}
       <TouchableOpacity
         style={NotificationStyles.backButton}
         onPress={() => navigation.navigate('Camera')}
@@ -472,6 +489,13 @@ const NotificationStyles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#FFFFFF', // White
   },
+  no: {
+    paddingTop: 250,
+    paddingBottom: 250,
+    marginVertical: 5,
+    color: '#FFFFFF',
+
+  },
   notificationText: {
     fontSize: 18,
   },
@@ -507,8 +531,6 @@ const HowToUseScreen = () => {
         6. Tap "Stop Streaming" when finished or as needed.
         {'\n\n'}
         7. Review notification times in the Notifications section.
-        {'\n\n'}
-        8. For more details or help, visit the Help/FAQ section in the app.
       </Text>
     </View>
   );
@@ -555,7 +577,7 @@ const ProfileScreen = () => {
     <View style={profilestyles.container}>
       <Text style={profilestyles.title}>Profile</Text>
       <View style={profilestyles.statistic}>
-        <Text style={profilestyles.statisticLabel}>Lifetime Bobbers Not Detected:</Text>
+        <Text style={profilestyles.statisticLabel}>Lifetime Undetected Bobbers:</Text>
         <Text style={profilestyles.statisticValue}>{lifetimeBobbersNotDetected}</Text>
       </View>
     </View>
@@ -596,13 +618,13 @@ const profilestyles = StyleSheet.create({
 function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen name="Camera" component={Camera} />
-        <Stack.Screen name="Notifications" component={NotificationScreen} />
-        <Stack.Screen name="Settings" component={SettingsScreen} />
-        <Stack.Screen name="HowToUse" component={HowToUseScreen} />
-        <Stack.Screen name="Profile" component={ProfileScreen} />
-      </Stack.Navigator>
+        <Stack.Navigator>
+          <Stack.Screen name="Camera" component={Camera} />
+          <Stack.Screen name="Notifications" component={NotificationScreen} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="HowToUse" component={HowToUseScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
+        </Stack.Navigator>
     </NavigationContainer>
   );
 }
