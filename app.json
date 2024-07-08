@@ -48,7 +48,8 @@
         {
           "cameraPermissionText": "$(PRODUCT_NAME) needs access to your camera"
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

@@ -12,7 +12,9 @@ import {
   Animated, 
   Easing,
   KeyboardAvoidingView,
-  Platform } from 'react-native';
+  Platform,
+  ActivityIndicator } from 'react-native';
+import { useFonts } from 'expo-font';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Slider }  from '@react-native-community/slider';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -37,11 +39,12 @@ const Camera = ({ navigation }) => {
   const [notifications, setNotifications] = useState([]);
   const [notificationSound] = useState(new Audio.Sound());
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [startTime, setStartTime] = useState(null);
 
   useEffect(() => {
     configurePushNotifications();
     loadNotificationSound();
-    
+
     return () => {
       clearInterval(frameInterval);
       notificationSound.unloadAsync();
@@ -77,6 +80,11 @@ const Camera = ({ navigation }) => {
 
   const sendNotification = async (message) => {
     try {
+      await Notifications.requestPermissionsAsync();
+    } catch (error) {
+      console.log(error);
+    }
+    try {
       const response = await Notifications.scheduleNotificationAsync({
         content: {
           title: 'Fishing Alert',
@@ -99,6 +107,7 @@ const Camera = ({ navigation }) => {
   const handleStartStreaming = async () => {
     if (cameraRef.current && !isStreaming) {
       setIsStreaming(true);
+      setStartTime(new Date());
       const interval = setInterval(async () => {
         try {
           const frame = await captureFrame();
@@ -111,8 +120,19 @@ const Camera = ({ navigation }) => {
     }
   };
 
-  const handleStopStreaming = () => {
+  const handleStopStreaming = async () => {
     setIsStreaming(false);
+    const endTime = new Date();
+    const sessionDuration = (endTime - startTime) / 1000; // Duration in seconds
+
+    try {
+      const storedDurations = await AsyncStorage.getItem('streamingDurations');
+      const durations = storedDurations ? JSON.parse(storedDurations) : [];
+      durations.push(sessionDuration);
+      await AsyncStorage.setItem('streamingDurations', JSON.stringify(durations));
+    } catch (error) {
+      console.error('Error saving streaming duration:', error);
+    }
     clearInterval(frameInterval);
   };
 
@@ -402,7 +422,7 @@ const settingStyles = StyleSheet.create({
     alignItems: 'center', // Center the input
   },
   settingLabel: {
-    fontSize: 24,
+    fontSize: 20,
     marginBottom: 10,
     color: '#FFFFFF', // White
   },
@@ -493,8 +513,9 @@ const NotificationStyles = StyleSheet.create({
     paddingTop: 250,
     paddingBottom: 250,
     marginVertical: 5,
-    color: '#FFFFFF',
-
+    color: 'lightgreen',
+    fontSize: 30,
+    fontWeight: 'bold',
   },
   notificationText: {
     fontSize: 18,
@@ -556,14 +577,24 @@ const howToUseStyles = StyleSheet.create({
 
 const ProfileScreen = () => {
   const [lifetimeBobbersNotDetected, setLifetimeBobbersNotDetected] = useState(0);
+  const [totalFishingSessions, setTotalFishingSessions] = useState(0);
+  const [totalStreamingTime, setTotalStreamingTime] = useState(0);
 
   useEffect(() => {
-    // Fetch and calculate lifetime statistics from AsyncStorage or API
+    // Fetch lifetime statistics from AsyncStorage
     const fetchLifetimeStats = async () => {
       try {
         const bobbersNotDetected = await AsyncStorage.getItem('lifetimeBobbersNotDetected');
         if (bobbersNotDetected !== null) {
           setLifetimeBobbersNotDetected(parseInt(bobbersNotDetected));
+        }
+
+        const storedDurations = await AsyncStorage.getItem('streamingDurations');
+        if (storedDurations !== null) {
+          const durations = JSON.parse(storedDurations);
+          const totalTime = durations.reduce((acc, curr) => acc + curr, 0);
+          setTotalStreamingTime(totalTime);
+          setTotalFishingSessions(durations.length);
         }
       } catch (error) {
         console.error('Error fetching lifetime statistics:', error);
@@ -574,17 +605,25 @@ const ProfileScreen = () => {
   }, []);
 
   return (
-    <View style={profilestyles.container}>
-      <Text style={profilestyles.title}>Profile</Text>
-      <View style={profilestyles.statistic}>
-        <Text style={profilestyles.statisticLabel}>Lifetime Undetected Bobbers:</Text>
-        <Text style={profilestyles.statisticValue}>{lifetimeBobbersNotDetected}</Text>
+    <View style={profileStyles.container}>
+      <Text style={profileStyles.title}>Profile</Text>
+      <View style={profileStyles.statistic}>
+        <Text style={profileStyles.statisticLabel}>Lifetime Bobbers Not Detected:</Text>
+        <Text style={profileStyles.statisticValue}>{lifetimeBobbersNotDetected}</Text>
+      </View>
+      <View style={profileStyles.statistic}>
+        <Text style={profileStyles.statisticLabel}>Total Fishing Sessions:</Text>
+        <Text style={profileStyles.statisticValue}>{totalFishingSessions}</Text>
+      </View>
+      <View style={profileStyles.statistic}>
+        <Text style={profileStyles.statisticLabel}>Total Streaming Time (seconds):</Text>
+        <Text style={profileStyles.statisticValue}>{totalStreamingTime.toFixed(2)}</Text>
       </View>
     </View>
   );
 };
 
-const profilestyles = StyleSheet.create({
+const profileStyles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -602,18 +641,20 @@ const profilestyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
+    width: '100%',
   },
   statisticLabel: {
-    fontSize: 24,
+    fontSize: 20,
     marginRight: 10,
     color: '#FFFFFF', // White
   },
   statisticValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#27AE60', // Emerald green
+    color: '#FFFFFF', // White
   },
 });
+
 
 function App() {
   return (
