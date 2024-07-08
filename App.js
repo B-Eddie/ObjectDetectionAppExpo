@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Button, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, Alert } from 'react-native';
+import { View, Button, Text, TouchableOpacity, StyleSheet, FlatList, TextInput, Alert, Vibration, Animated, Easing } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Slider }  from '@react-native-community/slider';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -23,6 +23,7 @@ const Camera = ({ navigation }) => {
   const [selectedFps, setSelectedFps] = useState('1');
   const [notifications, setNotifications] = useState([]);
   const [notificationSound] = useState(new Audio.Sound());
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     configurePushNotifications();
@@ -54,7 +55,7 @@ const Camera = ({ navigation }) => {
 
   const playNotificationSound = async () => {
     try {
-      await notificationSound.replayAsync();
+      await notificationSound.playAsync();
     } catch (error) {
       console.error('Error playing notification sound:', error);
     }
@@ -73,6 +74,7 @@ const Camera = ({ navigation }) => {
 
       const notificationTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // Use current time without seconds
       playNotificationSound();
+      Vibration.vibrate([500, 500, 500]);
       if (!notifications.includes(notificationTime)) {
         setNotifications([...notifications, notificationTime]);
       }
@@ -181,7 +183,21 @@ const Camera = ({ navigation }) => {
       </View>
     );
   }
-
+  const animateButton = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    }).start(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 1000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }).start();
+    });
+  };
   return (
     <View style={styles.container}>
       <CameraView style={styles.camera} ref={cameraRef}>
@@ -195,9 +211,17 @@ const Camera = ({ navigation }) => {
               <Text style={styles.text}>Stop Streaming</Text>
             </TouchableOpacity>
           )}
+          <Animated.View
+            style={[
+              styles.animationCircle,
+              {
+                opacity: fadeAnim,
+              },
+            ]}
+          />
         </View>
       </CameraView>
-      
+
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.settingsButton}
@@ -208,15 +232,16 @@ const Camera = ({ navigation }) => {
 
         <TouchableOpacity
           style={styles.notificationsButton}
-          onPress={() => navigation.navigate('Notifications', {notifications})}>
+          onPress={() => navigation.navigate('Notifications', { notifications })}
+        >
           <MaterialIcons name="notifications" size={24} color="white" />
         </TouchableOpacity>
 
-        <Text style={styles.howtouse} onPress={() => navigation.navigate('HowToUse')}>HowToUse</Text>
+        <Text style={styles.howtouse} onPress={() => navigation.navigate('HowToUse')}>
+          How To Use
+        </Text>
 
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => navigation.navigate('Profile')}>
+        <TouchableOpacity style={styles.profileButton} onPress={() => navigation.navigate('Profile')}>
           <MaterialIcons name="person" size={24} color="white" />
         </TouchableOpacity>
       </View>
@@ -240,7 +265,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   button: {
-    backgroundColor: 'blue',
+    backgroundColor: '#007bff', // Ocean blue
     paddingVertical: 15,
     paddingHorizontal: 30,
     borderRadius: 10,
@@ -250,37 +275,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  settingsButton: {
+  animationCircle: {
     position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 20,
-    justifyContent: 'center', // Center vertically
-    padding: 10,
-  },
-  notificationsButton: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 70,
-    justifyContent: 'center', // Center vertically
-    padding: 10,
-  },
-  howtouse: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    width: 200,
-    left: 120,
-  },
-  profileButton: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    right: 20,
-    justifyContent: 'center', // Center vertically
-    padding: 10,
+    top: -30,
+    alignSelf: 'center',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#007bff', // Ocean blue
   },
   topBar: {
     position: 'absolute',
@@ -288,8 +290,39 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 50,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center', // Center vertically
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent black
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  settingsButton: {
+    padding: 10,
+  },
+  notificationsButton: {
+    padding: 10,
+  },
+  howtouseButton: {
+    flex: 1, // Takes remaining space
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  howtouse: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    flex: 1,
+    lineHeight: 50,
+  },
+  howtouseText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  profileButton: {
+    padding: 10,
   },
 });
 
@@ -338,27 +371,28 @@ const SettingsScreen = ({ navigation, route }) => {
   );
 };
 
-
 const settingStyles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
-    marginBottom: 200,
+    backgroundColor: '#0B72B9', // Deep ocean blue
   },
   title: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 20,
+    color: '#FFFFFF', // White
   },
   settingItem: {
     marginBottom: 20,
     width: '100%',
   },
   settingLabel: {
-    fontSize: 18,
+    fontSize: 24,
     marginBottom: 10,
+    color: '#FFFFFF', // White
   },
   input: {
     height: 40,
@@ -367,27 +401,30 @@ const settingStyles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     width: '100%',
+    backgroundColor: '#FFFFFF', // White
   },
   saveButton: {
-    backgroundColor: '#007bff',
+    backgroundColor: '#27AE60', // Emerald green
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
+    marginTop: 20,
   },
   saveButtonText: {
-    color: '#fff',
-    fontSize: 18,
+    color: '#FFFFFF', // White
+    fontSize: 20,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
 
-function NotificationScreen({ route, navigation }) {
+const NotificationScreen = ({ route, navigation }) => {
   const { notifications } = route.params;
 
   return (
     <View style={NotificationStyles.container}>
       <Text style={NotificationStyles.title}>Notification Times</Text>
-      <Text>When the bobber is not detected</Text>
+      <Text style={NotificationStyles.subtitle}>When the bobber is not detected</Text>
       <FlatList
         data={notifications}
         keyExtractor={(item, index) => index.toString()}
@@ -405,19 +442,26 @@ function NotificationScreen({ route, navigation }) {
       </TouchableOpacity>
     </View>
   );
-}
+};
 
-const NotificationStyles = {
+const NotificationStyles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: '#0B72B9', // Deep ocean blue
   },
   title: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 20,
+    color: '#FFFFFF', // White
+  },
+  subtitle: {
+    fontSize: 18,
+    marginBottom: 10,
+    color: '#FFFFFF', // White
   },
   notificationItem: {
     borderWidth: 1,
@@ -426,6 +470,7 @@ const NotificationStyles = {
     padding: 10,
     marginVertical: 5,
     width: '100%',
+    backgroundColor: '#FFFFFF', // White
   },
   notificationText: {
     fontSize: 18,
@@ -434,15 +479,15 @@ const NotificationStyles = {
     marginTop: 20,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    backgroundColor: '#ccc',
+    backgroundColor: '#27AE60', // Emerald green
     borderRadius: 5,
   },
   backButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: 'black',
+    color: '#FFFFFF', // White
   },
-};
+});
 
 const HowToUseScreen = () => {
   return (
@@ -523,11 +568,13 @@ const profilestyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    backgroundColor: '#0B72B9', // Deep ocean blue
   },
   title: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 20,
+    color: '#FFFFFF', // White
   },
   statistic: {
     flexDirection: 'row',
@@ -535,12 +582,14 @@ const profilestyles = StyleSheet.create({
     marginBottom: 10,
   },
   statisticLabel: {
-    fontSize: 18,
+    fontSize: 24,
     marginRight: 10,
+    color: '#FFFFFF', // White
   },
   statisticValue: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
+    color: '#27AE60', // Emerald green
   },
 });
 
