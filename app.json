@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "ObjectDetectionAppExpo",
+    "name": "hookd",
     "slug": "ObjectDetectionAppExpo",
-    "version": "1.0.0",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -14,13 +14,15 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "$(PRODUCT_NAME) needs access to your camera"
+        "NSCameraUsageDescription": "$(PRODUCT_NAME) needs access to your camera",
+        "NSLocationWhenInUseUsageDescription": "We need your location to provide you with relevant nearby services."
       },
-      "bundleIdentifier": "com.ObjectDetectionApp"
+      "bundleIdentifier": "com.hackclub.hooked"
     },
     "android": {
       "permissions": [
         "CAMERA",
+        "NOTIFICATIONS",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ],
@@ -28,7 +30,7 @@
         "foregroundImage": "./frame_0248.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.ObjectDetectionApp"
+      "package": "com.hackclub.hooked"
     },
     "web": {
       "favicon": "./frame_0248.png"
@@ -50,6 +52,11 @@
         }
       ],
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c7aefda0-a249-43b1-900c-2a9178f6e486"
+      }
+    }
   }
 }

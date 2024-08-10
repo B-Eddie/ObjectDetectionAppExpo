@@ -1,32 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, 
-  Button, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
+import React, { useState, useEffect, useRef } from "react";
+import {
+  View,
+  Button,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
   FlatList,
-  TextInput, 
-  Alert, 
-  Vibration, 
-  Animated, 
+  TextInput,
+  Alert,
+  Vibration,
+  Animated,
   Easing,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator } from 'react-native';
-import { useFonts } from 'expo-font';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Slider }  from '@react-native-community/slider';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as Notifications from 'expo-notifications';
-import axios from 'axios';
-import * as ImageManipulator from 'expo-image-manipulator';
-import { createStackNavigator } from '@react-navigation/stack';
-import { NavigationContainer } from '@react-navigation/native';
-import { useNavigation } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { MaterialIcons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import * as Notifications from "expo-notifications";
+import axios from "axios";
+import * as ImageManipulator from "expo-image-manipulator";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { MaterialIcons } from "@expo/vector-icons";
+import { Audio } from "expo-av";
 
 const Stack = createNativeStackNavigator();
 
@@ -63,9 +59,9 @@ const Camera = ({ navigation }) => {
 
   const loadNotificationSound = async () => {
     try {
-      await notificationSound.loadAsync(require('./fish.wav'));
+      await notificationSound.loadAsync(require("./fish.wav"));
     } catch (error) {
-      console.error('Error loading notification sound:', error);
+      console.error("Error loading notification sound:", error);
     }
   };
 
@@ -73,10 +69,9 @@ const Camera = ({ navigation }) => {
     try {
       await notificationSound.playAsync();
     } catch (error) {
-      console.error('Error playing notification sound:', error);
+      console.error("Error playing notification sound:", error);
     }
   };
-
 
   const sendNotification = async (message) => {
     try {
@@ -87,20 +82,23 @@ const Camera = ({ navigation }) => {
     try {
       const response = await Notifications.scheduleNotificationAsync({
         content: {
-          title: 'Fishing Alert',
+          title: "Fishing Alert",
           body: message,
         },
         trigger: null,
       });
 
-      const notificationTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // Use current time without seconds
+      const notificationTime = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }); // current time without seconds
       playNotificationSound();
       Vibration.vibrate([500, 500, 500]);
       if (!notifications.includes(notificationTime)) {
         setNotifications([...notifications, notificationTime]);
       }
     } catch (error) {
-      console.error('Error scheduling notification:', error);
+      console.error("Error scheduling notification:", error);
     }
   };
 
@@ -113,7 +111,7 @@ const Camera = ({ navigation }) => {
           const frame = await captureFrame();
           await processFrame(frame);
         } catch (error) {
-          console.error('Error processing frame:', error);
+          console.error("Error processing frame:", error);
         }
       }, 1000 * parseInt(selectedFps));
       setFrameInterval(interval);
@@ -126,12 +124,15 @@ const Camera = ({ navigation }) => {
     const sessionDuration = (endTime - startTime) / 1000; // Duration in seconds
 
     try {
-      const storedDurations = await AsyncStorage.getItem('streamingDurations');
+      const storedDurations = await AsyncStorage.getItem("streamingDurations");
       const durations = storedDurations ? JSON.parse(storedDurations) : [];
       durations.push(sessionDuration);
-      await AsyncStorage.setItem('streamingDurations', JSON.stringify(durations));
+      await AsyncStorage.setItem(
+        "streamingDurations",
+        JSON.stringify(durations)
+      );
     } catch (error) {
-      console.error('Error saving streaming duration:', error);
+      console.error("Error saving streaming duration:", error);
     }
     clearInterval(frameInterval);
   };
@@ -139,7 +140,7 @@ const Camera = ({ navigation }) => {
   const captureFrame = async () => {
     if (cameraRef.current) {
       const frame = await cameraRef.current.takePictureAsync({
-        quality: 1, // Adjust quality as needed
+        quality: 1,
         base64: true, // Capture frame as base64
       });
       return frame;
@@ -151,37 +152,44 @@ const Camera = ({ navigation }) => {
     const base64Image = await resizeAndBase64Encode(frame);
     try {
       const response = await axios({
-        method: 'POST',
-        url: 'https://detect.roboflow.com/bobber-detection/3',
+        method: "POST",
+        url: "https://detect.roboflow.com/bobber-detection/3",
         params: {
-          api_key: 'zuxqZZaKZVPbzrB23QRP'
+          api_key: "zuxqZZaKZVPbzrB23QRP",
         },
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          "Content-Type": "application/x-www-form-urlencoded",
         },
-        data: `${base64Image}`
+        data: `${base64Image}`,
       });
       const bobberDetected = response.data.predictions.some(
-        (prediction) => prediction.class === 'bobbers'
+        (prediction) => prediction.class === "bobbers"
       );
 
       if (!bobberDetected) {
         incrementLifetimeBobbersNotDetected();
-        sendNotification('No bobber detected! Check your line.');
-      } 
+        sendNotification("No bobber detected! Check your line.");
+      }
     } catch (error) {
-      console.error('Error detecting bobber:', error);
+      console.error("Error detecting bobber:", error);
     }
   };
 
   const incrementLifetimeBobbersNotDetected = async () => {
     try {
-      let currentLifetimeCount = await AsyncStorage.getItem('lifetimeBobbersNotDetected');
-      currentLifetimeCount = currentLifetimeCount ? parseInt(currentLifetimeCount) : 0;
+      let currentLifetimeCount = await AsyncStorage.getItem(
+        "lifetimeBobbersNotDetected"
+      );
+      currentLifetimeCount = currentLifetimeCount
+        ? parseInt(currentLifetimeCount)
+        : 0;
       const newLifetimeCount = currentLifetimeCount + 1;
-      await AsyncStorage.setItem('lifetimeBobbersNotDetected', newLifetimeCount.toString());
+      await AsyncStorage.setItem(
+        "lifetimeBobbersNotDetected",
+        newLifetimeCount.toString()
+      );
     } catch (error) {
-      console.error('Error incrementing lifetime bobbers not detected:', error);
+      console.error("Error incrementing lifetime bobbers not detected:", error);
     }
   };
 
@@ -189,13 +197,20 @@ const Camera = ({ navigation }) => {
     try {
       const resizedImage = await ImageManipulator.manipulateAsync(
         frameData.uri,
-        [{ resize: { height: frameData.height / 5, width: frameData.width / 5 } }],
-        { format: 'jpeg', base64: true }
+        [
+          {
+            resize: {
+              height: frameData.height / 5,
+              width: frameData.width / 5,
+            },
+          },
+        ],
+        { format: "jpeg", base64: true }
       );
 
       return resizedImage.base64;
     } catch (error) {
-      console.error('Error resizing image:', error);
+      console.error("Error resizing image:", error);
       throw error; // Throw the error instead of returning null
     }
   };
@@ -207,7 +222,9 @@ const Camera = ({ navigation }) => {
   if (!permission.granted) {
     return (
       <View style={styles.container}>
-        <Text style={{ textAlign: 'center' }}>We need your permission to show the camera</Text>
+        <Text style={{ textAlign: "center" }}>
+          We need your permission to show the camera
+        </Text>
         <Button onPress={requestPermission} title="Grant Permission" />
       </View>
     );
@@ -232,11 +249,17 @@ const Camera = ({ navigation }) => {
       <CameraView style={styles.camera} ref={cameraRef}>
         <View style={styles.buttonContainer}>
           {!isStreaming ? (
-            <TouchableOpacity style={styles.button} onPress={handleStartStreaming}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleStartStreaming}
+            >
               <Text style={styles.text}>Start Streaming</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.button} onPress={handleStopStreaming}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleStopStreaming}
+            >
               <Text style={styles.text}>Stop Streaming</Text>
             </TouchableOpacity>
           )}
@@ -254,23 +277,33 @@ const Camera = ({ navigation }) => {
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.settingsButton}
-          onPress={() => navigation.navigate('Settings', { selectedFps, setSelectedFps })}
+          onPress={() =>
+            navigation.navigate("Settings", { selectedFps, setSelectedFps })
+          }
         >
           <MaterialIcons name="settings" size={24} color="white" />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.notificationsButton}
-          onPress={() => navigation.navigate('Notifications', { notifications })}
+          onPress={() =>
+            navigation.navigate("Notifications", { notifications })
+          }
         >
           <MaterialIcons name="notifications" size={24} color="white" />
         </TouchableOpacity>
 
-        <Text style={styles.howtouse} onPress={() => navigation.navigate('HowToUse')}>
+        <Text
+          style={styles.howtouse}
+          onPress={() => navigation.navigate("HowToUse")}
+        >
           How To Use
         </Text>
 
-        <TouchableOpacity style={styles.profileButton} onPress={() => navigation.navigate('Profile')}>
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={() => navigation.navigate("Profile")}
+        >
           <MaterialIcons name="person" size={24} color="white" />
         </TouchableOpacity>
       </View>
@@ -281,49 +314,49 @@ const Camera = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   camera: {
     flex: 1,
-    width: '100%',
+    width: "100%",
   },
   buttonContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   button: {
-    backgroundColor: '#007bff', // Ocean blue
+    backgroundColor: "#007bff",
     paddingVertical: 15,
     paddingHorizontal: 30,
     borderRadius: 10,
   },
   text: {
-    color: 'white',
+    color: "white",
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   animationCircle: {
-    position: 'absolute',
+    position: "absolute",
     top: -30,
-    alignSelf: 'center',
+    alignSelf: "center",
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#007bff', // Ocean blue
+    backgroundColor: "#007bff",
   },
   topBar: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     height: 50,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent black
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   settingsButton: {
     padding: 10,
@@ -332,23 +365,23 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   howtouseButton: {
-    flex: 1, // Takes remaining space
-    alignItems: 'center',
-    justifyContent: 'center',
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   howtouse: {
-    color: 'white',
+    color: "white",
     fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
     flex: 1,
     lineHeight: 50,
   },
   howtouseText: {
-    color: 'white',
+    color: "white",
     fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
   },
   profileButton: {
     padding: 10,
@@ -362,28 +395,30 @@ const SettingsScreen = ({ navigation, route }) => {
   const saveSettings = async () => {
     // Check if selectedFps is lower than 1
     if (parseInt(selectedFps) < 1) {
-      Alert.alert('Error', 'Capture Interval must be 1 or higher.');
+      Alert.alert("Error", "Capture Interval must be 1 or higher.");
       return;
     }
 
     try {
-      await AsyncStorage.setItem('selectedFps', selectedFps);
+      await AsyncStorage.setItem("selectedFps", selectedFps);
       navigation.goBack();
     } catch (error) {
-      console.error('Error saving settings:', error);
-      // Handle error saving settings
+      console.error("Error saving settings:", error);
     }
   };
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={settingStyles.container}>
+      style={settingStyles.container}
+    >
       <View style={settingStyles.container}>
         <Text style={settingStyles.title}>Settings</Text>
 
         {/* FPS Input */}
         <View style={settingStyles.settingItem}>
-          <Text style={settingStyles.settingLabel}>Capture Interval (Second)</Text>
+          <Text style={settingStyles.settingLabel}>
+            Capture Interval (Second)
+          </Text>
           <TextInput
             style={settingStyles.input}
             value={selectedFps}
@@ -394,7 +429,10 @@ const SettingsScreen = ({ navigation, route }) => {
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity style={settingStyles.saveButton} onPress={saveSettings}>
+        <TouchableOpacity
+          style={settingStyles.saveButton}
+          onPress={saveSettings}
+        >
           <Text style={settingStyles.saveButtonText}>Save Settings</Text>
         </TouchableOpacity>
       </View>
@@ -405,49 +443,49 @@ const SettingsScreen = ({ navigation, route }) => {
 const settingStyles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
-    backgroundColor: '#0B72B9', // Deep ocean blue
+    backgroundColor: "#0B72B9",
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 20,
-    color: '#FFFFFF', // White
+    color: "#FFFFFF",
   },
   settingItem: {
     marginBottom: 20,
-    width: '100%',
-    alignItems: 'center', // Center the input
+    width: "100%",
+    alignItems: "center",
   },
   settingLabel: {
     fontSize: 20,
     marginBottom: 10,
-    color: '#FFFFFF', // White
+    color: "#FFFFFF",
   },
   input: {
     height: 40,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 8,
     paddingHorizontal: 10,
-    width: '500%',
-    backgroundColor: '#FFFFFF', // White
-    textAlign: 'center', // Center the text
+    width: "500%",
+    backgroundColor: "#FFFFFF",
+    textAlign: "center",
   },
   saveButton: {
-    backgroundColor: '#27AE60', // Emerald green
+    backgroundColor: "#27AE60",
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
     marginTop: 20,
   },
   saveButtonText: {
-    color: '#FFFFFF', // White
+    color: "#FFFFFF",
     fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
   },
 });
 
@@ -457,7 +495,9 @@ const NotificationScreen = ({ route, navigation }) => {
   return (
     <View style={NotificationStyles.container}>
       <Text style={NotificationStyles.title}>Notification Times</Text>
-      <Text style={NotificationStyles.subtitle}>When the bobber is not detected</Text>
+      <Text style={NotificationStyles.subtitle}>
+        When the bobber is not detected
+      </Text>
       {notifications.length === 0 ? (
         <Text style={NotificationStyles.no}>No notifications</Text>
       ) : (
@@ -473,7 +513,7 @@ const NotificationScreen = ({ route, navigation }) => {
       )}
       <TouchableOpacity
         style={NotificationStyles.backButton}
-        onPress={() => navigation.navigate('Camera')}
+        onPress={() => navigation.navigate("Camera")}
       >
         <Text style={NotificationStyles.backButtonText}>Back</Text>
       </TouchableOpacity>
@@ -484,38 +524,38 @@ const NotificationScreen = ({ route, navigation }) => {
 const NotificationStyles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
-    backgroundColor: '#0B72B9', // Deep ocean blue
+    backgroundColor: "#0B72B9",
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 20,
-    color: '#FFFFFF', // White
+    color: "#FFFFFF",
   },
   subtitle: {
     fontSize: 18,
     marginBottom: 10,
-    color: '#FFFFFF', // White
+    color: "#FFFFFF",
   },
   notificationItem: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 5,
     padding: 10,
     marginVertical: 5,
-    width: '100%',
-    backgroundColor: '#FFFFFF', // White
+    width: "100%",
+    backgroundColor: "#FFFFFF",
   },
   no: {
     paddingTop: 250,
     paddingBottom: 250,
     marginVertical: 5,
-    color: 'lightgreen',
+    color: "lightgreen",
     fontSize: 30,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   notificationText: {
     fontSize: 18,
@@ -524,13 +564,13 @@ const NotificationStyles = StyleSheet.create({
     marginTop: 20,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    backgroundColor: '#27AE60', // Emerald green
+    backgroundColor: "#27AE60",
     borderRadius: 5,
   },
   backButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF', // White
+    fontWeight: "bold",
+    color: "#FFFFFF",
   },
 });
 
@@ -540,17 +580,17 @@ const HowToUseScreen = () => {
       <Text style={howToUseStyles.title}>How to Use</Text>
       <Text style={howToUseStyles.description}>
         1. Place your phone securely, facing towards your fishing bobber.
-        {'\n\n'}
+        {"\n\n"}
         2. Open the app and grant camera permissions if prompted.
-        {'\n\n'}
+        {"\n\n"}
         3. Tap "Start Streaming" to begin monitoring for bobber movements.
-        {'\n\n'}
+        {"\n\n"}
         4. Adjust the capture interval setting if needed in the settings.
-        {'\n\n'}
+        {"\n\n"}
         5. If a bobber is detected, you'll receive a notification.
-        {'\n\n'}
+        {"\n\n"}
         6. Tap "Stop Streaming" when finished or as needed.
-        {'\n\n'}
+        {"\n\n"}
         7. Review notification times in the Notifications section.
       </Text>
     </View>
@@ -560,23 +600,24 @@ const HowToUseScreen = () => {
 const howToUseStyles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 20,
   },
   description: {
     fontSize: 18,
-    textAlign: 'left',
+    textAlign: "left",
   },
 });
 
 const ProfileScreen = () => {
-  const [lifetimeBobbersNotDetected, setLifetimeBobbersNotDetected] = useState(0);
+  const [lifetimeBobbersNotDetected, setLifetimeBobbersNotDetected] =
+    useState(0);
   const [totalFishingSessions, setTotalFishingSessions] = useState(0);
   const [totalStreamingTime, setTotalStreamingTime] = useState(0);
 
@@ -584,12 +625,16 @@ const ProfileScreen = () => {
     // Fetch lifetime statistics from AsyncStorage
     const fetchLifetimeStats = async () => {
       try {
-        const bobbersNotDetected = await AsyncStorage.getItem('lifetimeBobbersNotDetected');
+        const bobbersNotDetected = await AsyncStorage.getItem(
+          "lifetimeBobbersNotDetected"
+        );
         if (bobbersNotDetected !== null) {
           setLifetimeBobbersNotDetected(parseInt(bobbersNotDetected));
         }
 
-        const storedDurations = await AsyncStorage.getItem('streamingDurations');
+        const storedDurations = await AsyncStorage.getItem(
+          "streamingDurations"
+        );
         if (storedDurations !== null) {
           const durations = JSON.parse(storedDurations);
           const totalTime = durations.reduce((acc, curr) => acc + curr, 0);
@@ -597,7 +642,7 @@ const ProfileScreen = () => {
           setTotalFishingSessions(durations.length);
         }
       } catch (error) {
-        console.error('Error fetching lifetime statistics:', error);
+        console.error("Error fetching lifetime statistics:", error);
       }
     };
 
@@ -608,16 +653,26 @@ const ProfileScreen = () => {
     <View style={profileStyles.container}>
       <Text style={profileStyles.title}>Profile</Text>
       <View style={profileStyles.statistic}>
-        <Text style={profileStyles.statisticLabel}>Lifetime Bobbers Not Detected:</Text>
-        <Text style={profileStyles.statisticValue}>{lifetimeBobbersNotDetected}</Text>
+        <Text style={profileStyles.statisticLabel}>
+          Lifetime Bobbers Not Detected:
+        </Text>
+        <Text style={profileStyles.statisticValue}>
+          {lifetimeBobbersNotDetected}
+        </Text>
       </View>
       <View style={profileStyles.statistic}>
-        <Text style={profileStyles.statisticLabel}>Total Fishing Sessions:</Text>
+        <Text style={profileStyles.statisticLabel}>
+          Total Fishing Sessions:
+        </Text>
         <Text style={profileStyles.statisticValue}>{totalFishingSessions}</Text>
       </View>
       <View style={profileStyles.statistic}>
-        <Text style={profileStyles.statisticLabel}>Total Streaming Time (seconds):</Text>
-        <Text style={profileStyles.statisticValue}>{totalStreamingTime.toFixed(2)}</Text>
+        <Text style={profileStyles.statisticLabel}>
+          Total Streaming Time (seconds):
+        </Text>
+        <Text style={profileStyles.statisticValue}>
+          {totalStreamingTime.toFixed(2)}
+        </Text>
       </View>
     </View>
   );
@@ -626,46 +681,45 @@ const ProfileScreen = () => {
 const profileStyles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
-    backgroundColor: '#0B72B9', // Deep ocean blue
+    backgroundColor: "#0B72B9",
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 20,
-    color: '#FFFFFF', // White
+    color: "#FFFFFF",
   },
   statistic: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 10,
-    width: '100%',
+    width: "100%",
   },
   statisticLabel: {
     fontSize: 20,
     marginRight: 10,
-    color: '#FFFFFF', // White
+    color: "#FFFFFF",
   },
   statisticValue: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF', // White
+    fontWeight: "bold",
+    color: "#FFFFFF",
   },
 });
-
 
 function App() {
   return (
     <NavigationContainer>
-        <Stack.Navigator>
-          <Stack.Screen name="Camera" component={Camera} />
-          <Stack.Screen name="Notifications" component={NotificationScreen} />
-          <Stack.Screen name="Settings" component={SettingsScreen} />
-          <Stack.Screen name="HowToUse" component={HowToUseScreen} />
-          <Stack.Screen name="Profile" component={ProfileScreen} />
-        </Stack.Navigator>
+      <Stack.Navigator>
+        <Stack.Screen name="Camera" component={Camera} />
+        <Stack.Screen name="Notifications" component={NotificationScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="HowToUse" component={HowToUseScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
+      </Stack.Navigator>
     </NavigationContainer>
   );
 }
