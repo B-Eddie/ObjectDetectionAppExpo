@@ -1,3 +1,6 @@
+![image](https://github.com/user-attachments/assets/b32d00af-80b4-41b7-a726-75af3324ea1f)
+
+
 # Hookd
 This is an app designed to make fishing more productive. Imagine bobber fishing, but without the time-consuming task of staring for hours at a time at your bobber, waiting for a fish to bite. This app will completely remove the unnecessary need to constantly watch your bobber! 
 
