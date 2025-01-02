@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "hookd",
+    "name": "Hookd",
     "slug": "ObjectDetectionAppExpo",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -17,7 +17,7 @@
         "NSCameraUsageDescription": "$(PRODUCT_NAME) needs access to your camera",
         "NSLocationWhenInUseUsageDescription": "We need your location to provide you with relevant nearby services."
       },
-      "bundleIdentifier": "com.hackclub.hooked"
+      "bundleIdentifier": "com.eddie.hooked"
     },
     "android": {
       "permissions": [
@@ -30,7 +30,7 @@
         "foregroundImage": "./frame_0248.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.hackclub.hooked"
+      "package": "com.eddie.hooked"
     },
     "web": {
       "favicon": "./frame_0248.png"
