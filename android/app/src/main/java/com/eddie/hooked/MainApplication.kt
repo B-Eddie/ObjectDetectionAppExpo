@@ -1,4 +1,4 @@
-package com.ObjectDetectionApp
+package com.eddie.hooked
 
 import android.app.Application
 import android.content.res.Configuration

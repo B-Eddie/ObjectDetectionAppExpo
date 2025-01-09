@@ -1,4 +1,4 @@
-package com.ObjectDetectionApp
+package com.eddie.hooked
 
 import android.os.Build
 import android.os.Bundle
